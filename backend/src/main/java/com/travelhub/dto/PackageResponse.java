@@ -79,11 +79,11 @@ public class PackageResponse {
                 .rating(pkg.getRating())
                 .reviewCount(pkg.getReviewCount())
                 .createdAt(pkg.getCreatedAt())
-                .agencyId(pkg.getAgency().getId())
-                .agencyName(pkg.getAgency().getAgencyName())
+                // .agencyId(pkg.getAgency().getId())
+                // .agencyName(pkg.getAgency().getAgencyName())
                 .agencyPhone(pkg.getAgency().getPhone())
                 .agencyWhatsapp(pkg.getAgency().getWhatsappNumber())
-                .agencyLogo(pkg.getAgency().getAgencyLogo())
+                // .agencyLogo(pkg.getAgency().getAgencyLogo())
                 .build();
     }
 }

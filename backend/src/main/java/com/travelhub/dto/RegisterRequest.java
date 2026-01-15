@@ -22,16 +22,7 @@ public class RegisterRequest {
     
     @NotBlank(message = "Phone is required")
     private String phone;
-    
-    @NotNull(message = "Role is required")
-    private UserRole role;
-    
-    // Agency specific fields (optional for regular users)
-    private String agencyName;
-    private String agencyDescription;
-    private String agencyLogo;
+
     private String whatsappNumber;
-    private String address;
-    private String city;
 }
 

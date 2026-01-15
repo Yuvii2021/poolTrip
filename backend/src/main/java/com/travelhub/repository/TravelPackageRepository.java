@@ -14,13 +14,11 @@ public interface TravelPackageRepository extends JpaRepository<TravelPackage, Lo
     
     List<TravelPackage> findByAgency(User agency);
     
-    List<TravelPackage> findByAgencyId(Long agencyId);
-    
     List<TravelPackage> findByStatus(TravelPackage.PackageStatus status);
     
     List<TravelPackage> findByPackageType(TravelPackage.PackageType packageType);
     
-    List<TravelPackage> findByFeaturedTrue();
+    // List<TravelPackage> findByFeaturedTrue();
     
     @Query("SELECT p FROM TravelPackage p WHERE p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
     List<TravelPackage> findAllActivePackages();

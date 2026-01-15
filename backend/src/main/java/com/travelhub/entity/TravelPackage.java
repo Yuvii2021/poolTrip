@@ -112,7 +112,7 @@ public class TravelPackage {
     }
     
     public enum PackageStatus {
-        ACTIVE, INACTIVE, SOLDOUT, EXPIRED
+        ACTIVE, SOLDOUT
     }
 }
 

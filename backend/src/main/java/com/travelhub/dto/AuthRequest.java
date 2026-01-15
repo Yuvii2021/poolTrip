@@ -8,7 +8,7 @@ import lombok.Data;
 public class AuthRequest {
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    private String email;
+    private String number;-- email -- number 
     
     @NotBlank(message = "Password is required")
     private String password;

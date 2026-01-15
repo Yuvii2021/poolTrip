@@ -28,17 +28,7 @@ public class User {
     @Column(nullable = false)
     private String phone;
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
-    
-    // Agency specific fields
-    private String agencyName;
-    private String agencyDescription;
-    private String agencyLogo;
     private String whatsappNumber;
-    private String address;
-    private String city;
     
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -56,8 +46,5 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
     
-    public enum UserRole {
-        USER, AGENCY
-    }
 }
 

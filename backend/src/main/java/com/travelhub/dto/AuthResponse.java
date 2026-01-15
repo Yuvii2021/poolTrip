@@ -13,11 +13,9 @@ import lombok.NoArgsConstructor;
 public class AuthResponse {
     private String token;
     private Long userId;
-    private String email;
+    private String email; maindatory nhi hai
     private String fullName;
-    private UserRole role;
-    private String agencyName;
     private String phone;
-    private String whatsappNumber;
+    private String whatsappNumber; maindatory nhi hai
 }
 

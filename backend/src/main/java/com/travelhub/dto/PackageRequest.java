@@ -42,6 +42,9 @@ public class PackageRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     
+    private String vechile-- sleeper , semi sleeper
+    private List stopping-- like ambala , delhi
+    
     private String inclusions;
     private String exclusions;
     private String itinerary;
@@ -51,6 +54,6 @@ public class PackageRequest {
     private String images;
     
     private PackageType packageType;
-    private Boolean featured;
+    // private Boolean featured; 
 }
 
