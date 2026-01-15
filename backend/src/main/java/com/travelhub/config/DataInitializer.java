@@ -332,10 +332,5 @@ public class DataInitializer implements CommandLineRunner {
 
 
 
-
-
-// otp walla 
-// distance --main
 // destination -- xyz -- nearby
-// starting point how to filter 
-// 
+// starting point how to filter
