@@ -1,6 +1,5 @@
 package com.travelhub.dto;
 
-import com.travelhub.entity.TravelPackage.PackageType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -8,6 +7,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public class PackageRequest {
@@ -19,6 +19,7 @@ public class PackageRequest {
     @NotBlank(message = "Destination is required")
     private String destination;
     
+    @NotBlank(message = "Origin is required")
     private String origin;
     
     @NotNull(message = "Price is required")
@@ -42,18 +43,15 @@ public class PackageRequest {
     private LocalDate startDate;
     private LocalDate endDate;
     
-    private String vechile-- sleeper , semi sleeper
-    private List stopping-- like ambala , delhi
+    private String vechile;
     
     private String inclusions;
     private String exclusions;
     private String itinerary;
     private String termsAndConditions;
     private String cancellationPolicy;
-    private String coverImage;
-    private String images;
+    private List<String> images;
     
-    private PackageType packageType;
     // private Boolean featured; 
 }
 

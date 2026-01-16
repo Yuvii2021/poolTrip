@@ -29,6 +29,11 @@ public class User {
     private String phone;
     
     private String whatsappNumber;
+
+
+    private Double rating;
+
+    private Integer reviewCount;
     
     @Column(updatable = false)
     private LocalDateTime createdAt;
@@ -39,6 +44,8 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if(rating==null)rating = 0.0;
+        if(reviewCount==null)reviewCount = 0;
     }
     
     @PreUpdate

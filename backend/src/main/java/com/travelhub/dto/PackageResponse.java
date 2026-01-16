@@ -1,8 +1,8 @@
 package com.travelhub.dto;
 
 import com.travelhub.entity.TravelPackage;
+import com.travelhub.entity.User;
 import com.travelhub.entity.TravelPackage.PackageStatus;
-import com.travelhub.entity.TravelPackage.PackageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -20,10 +21,12 @@ public class PackageResponse {
     private Long id;
     private String title;
     private String description;
-    private String destination;
-    private String origin;
-    private BigDecimal price;
-    private BigDecimal discountedPrice;
+    private Double originLatitude;
+    private Double originLongitude;
+    private Double destinationLatitude;
+    private Double destinationLongitude;
+    private Integer price;
+    private Integer discountedPrice;
     private Integer durationDays;
     private Integer durationNights;
     private Integer totalSeats;
@@ -36,28 +39,23 @@ public class PackageResponse {
     private String termsAndConditions;
     private String cancellationPolicy;
     private String coverImage;
-    private String images;
-    private PackageType packageType;
+    private List<String> images;
     private PackageStatus status;
     private Boolean featured;
     private Double rating;
     private Integer reviewCount;
+    private List<String> reviews;
     private LocalDateTime createdAt;
     
-    // Agency info
-    private Long agencyId;
-    private String agencyName;
-    private String agencyPhone;
-    private String agencyWhatsapp;
-    private String agencyLogo;
-    
-    public static PackageResponse fromEntity(TravelPackage pkg) {
+    public static PackageResponse fromEntity(TravelPackage pkg, User user) {
         return PackageResponse.builder()
                 .id(pkg.getId())
                 .title(pkg.getTitle())
                 .description(pkg.getDescription())
-                .destination(pkg.getDestination())
-                .origin(pkg.getOrigin())
+                .destinationLatitude(pkg.getDestinationLatitude())
+                .destinationLongitude(pkg.getDestinationLongitude())
+                .originLatitude(pkg.getOriginLatitude())
+                .originLongitude(pkg.getOriginLongitude())
                 .price(pkg.getPrice())
                 .discountedPrice(pkg.getDiscountedPrice())
                 .durationDays(pkg.getDurationDays())
@@ -71,19 +69,12 @@ public class PackageResponse {
                 .itinerary(pkg.getItinerary())
                 .termsAndConditions(pkg.getTermsAndConditions())
                 .cancellationPolicy(pkg.getCancellationPolicy())
-                .coverImage(pkg.getCoverImage())
-                .images(pkg.getImages())
-                .packageType(pkg.getPackageType())
+                .images(pkg.getImageUrls())
                 .status(pkg.getStatus())
                 .featured(pkg.getFeatured())
-                .rating(pkg.getRating())
-                .reviewCount(pkg.getReviewCount())
+                .rating(user.getRating())
+                .reviewCount(user.getReviewCount())
                 .createdAt(pkg.getCreatedAt())
-                // .agencyId(pkg.getAgency().getId())
-                // .agencyName(pkg.getAgency().getAgencyName())
-                .agencyPhone(pkg.getAgency().getPhone())
-                .agencyWhatsapp(pkg.getAgency().getWhatsappNumber())
-                // .agencyLogo(pkg.getAgency().getAgencyLogo())
                 .build();
     }
 }
