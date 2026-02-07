@@ -25,17 +25,17 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
     
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, String Phone) {
         return Jwts.builder()
-                .subject(email)
-                .claim("role", role)
+                .subject(Phone)
+                .claim("Email", email)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKey())
                 .compact();
     }
     
-    public String getEmailFromToken(String token) {
+    public String getPhoneFromToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()

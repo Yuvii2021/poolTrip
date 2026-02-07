@@ -30,7 +30,6 @@ public class User {
     
     private String whatsappNumber;
 
-
     private Double rating;
 
     private Integer reviewCount;
@@ -40,12 +39,15 @@ public class User {
     
     private LocalDateTime updatedAt;
     
+   @Column(nullable = false)
+   private Long numberOfTrips;
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if(rating==null)rating = 0.0;
         if(reviewCount==null)reviewCount = 0;
+        if (numberOfTrips == null) numberOfTrips = 0L;
     }
     
     @PreUpdate

@@ -3,6 +3,7 @@ package com.travelhub.controller;
 import com.travelhub.dto.AuthRequest;
 import com.travelhub.dto.AuthResponse;
 import com.travelhub.dto.RegisterRequest;
+import com.travelhub.dto.updateAuth;
 import com.travelhub.entity.User;
 import com.travelhub.service.AuthService;
 import jakarta.validation.Valid;
@@ -41,11 +42,38 @@ public class AuthController {
                 "email", user.getEmail(),
                 "fullName", user.getFullName(),
                 "phone", user.getPhone(),
-                "role", user.getRole(),
-                "agencyName", user.getAgencyName() != null ? user.getAgencyName() : "",
                 "whatsappNumber", user.getWhatsappNumber() != null ? user.getWhatsappNumber() : "",
-                "agencyLogo", user.getAgencyLogo() != null ? user.getAgencyLogo() : "",
-                "city", user.getCity() != null ? user.getCity() : ""
+                "rating", user.getRating(),
+                "reviewCount", user.getReviewCount()
+        ));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<?> updateCurrentUser(@AuthenticationPrincipal UserDetails userDetails,@Valid @RequestBody updateAuth updates) {
+        User updatedUser = authService.updateCurrentUser(userDetails.getUsername(), updates);
+
+        return ResponseEntity.ok(Map.of(
+                "id", updatedUser.getId(),
+                "email", updatedUser.getEmail(),
+                "fullName", updatedUser.getFullName(),
+                "phone", updatedUser.getPhone(),
+                "whatsappNumber", updatedUser.getWhatsappNumber() != null ? updatedUser.getWhatsappNumber() : "",
+                "rating", updatedUser.getRating(),
+                "reviewCount", updatedUser.getReviewCount(),
+                "numberOfTrips", updatedUser.getNumberOfTrips()));
+    }
+
+    @GetMapping("/user/{id}")
+    public ResponseEntity<?> getUser(Long id) {
+        User user = authService.getUserById(id);
+        return ResponseEntity.ok(Map.of(
+                "id", user.getId(),
+                "email", user.getEmail(),
+                "fullName", user.getFullName(),
+                "phone", user.getPhone(),
+                "whatsappNumber", user.getWhatsappNumber() != null ? user.getWhatsappNumber() : "",
+                "rating", user.getRating(),
+                "reviewCount", user.getReviewCount()
         ));
     }
 }

@@ -2,13 +2,13 @@ package com.travelhub.dto;
 
 import com.travelhub.entity.TravelPackage;
 import com.travelhub.entity.User;
+import com.travelhub.enums.Transportation;
 import com.travelhub.entity.TravelPackage.PackageStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,13 +32,14 @@ public class PackageResponse {
     private Integer totalSeats;
     private Integer availableSeats;
     private LocalDate startDate;
-    private LocalDate endDate;
     private String inclusions;
     private String exclusions;
-    private String itinerary;
+    private Long userId;
+    private List<String> itinerary;
     private String termsAndConditions;
     private String cancellationPolicy;
     private String coverImage;
+    private Transportation transportation;
     private List<String> images;
     private PackageStatus status;
     private Boolean featured;
@@ -63,7 +64,6 @@ public class PackageResponse {
                 .totalSeats(pkg.getTotalSeats())
                 .availableSeats(pkg.getAvailableSeats())
                 .startDate(pkg.getStartDate())
-                .endDate(pkg.getEndDate())
                 .inclusions(pkg.getInclusions())
                 .exclusions(pkg.getExclusions())
                 .itinerary(pkg.getItinerary())
@@ -72,7 +72,9 @@ public class PackageResponse {
                 .images(pkg.getImageUrls())
                 .status(pkg.getStatus())
                 .featured(pkg.getFeatured())
+                .transportation(pkg.getTransportation())
                 .rating(user.getRating())
+                .userId(user.getId())
                 .reviewCount(user.getReviewCount())
                 .createdAt(pkg.getCreatedAt())
                 .build();

@@ -1,11 +1,16 @@
 package com.travelhub.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Min;
 import lombok.*;
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.travelhub.enums.Transportation;
 
 
 @Entity
@@ -15,60 +20,80 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class TravelPackage {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     // ===== BASIC INFO =====
+    @NotBlank(message = "Title is required")
     @Column(nullable = false)
     private String title;
+
+    @NotNull(message = "User is required")
+    @Column(nullable = false)
+    private Long userId;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
     // ===== ORIGIN =====
+    @NotBlank(message = "Origin name is required")
     @Column(nullable = false)
     private String originName;
 
+    @NotNull(message = "Origin latitude is required")
     @Column(nullable = false)
     private Double originLatitude;
 
+    @NotNull(message = "Origin longitude is required")
     @Column(nullable = false)
     private Double originLongitude;
 
     // ===== DESTINATION =====
+    @NotBlank(message = "Destination name is required")
     @Column(nullable = false)
     private String destinationName;
 
+    @NotNull(message = "Destination latitude is required")
     @Column(nullable = false)
     private Double destinationLatitude;
 
+    @NotNull(message = "Destination longitude is required")
     @Column(nullable = false)
     private Double destinationLongitude;
 
     // ===== PRICING =====
+    @NotNull(message = "Price is required")
+    @Positive(message = "Price must be greater than 0")
     @Column(nullable = false)
     private Integer price;
 
     private Integer discountedPrice;
 
     // ===== DURATION =====
+    @NotNull(message = "Duration (days) is required")
+    @Min(value = 1, message = "Duration must be at least 1 day")
     @Column(nullable = false)
     private Integer durationDays;
 
+    @NotNull(message = "Duration (days) is required")
+    @Min(value = 1, message = "Duration must be at least 1 day")
+    @Column(nullable = false)
     private Integer durationNights;
 
     // ===== SEATS =====
+    @NotNull(message = "Total seats are required")
+    @Min(value = 1, message = "Total seats must be at least 1")
     @Column(nullable = false)
     private Integer totalSeats;
 
+    @NotNull(message = "Available seats are required")
+    @Min(value = 0, message = "Available seats cannot be negative")
     @Column(nullable = false)
     private Integer availableSeats;
 
     // ===== DATES =====
     private LocalDate startDate;
-    private LocalDate endDate;
 
     // ===== DETAILS =====
     @Column(columnDefinition = "TEXT")
@@ -77,8 +102,16 @@ public class TravelPackage {
     @Column(columnDefinition = "TEXT")
     private String exclusions;
 
+    // ===== TRANSPORT =====
+    @NotNull(message = "Transportation type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Transportation transportation;
+
+    // ===== ITINERARY =====
     @Column(columnDefinition = "TEXT")
-    private String itinerary;
+    private List<String> itinerary;
+
 
     @Column(columnDefinition = "TEXT")
     private String termsAndConditions;
@@ -86,8 +119,6 @@ public class TravelPackage {
     @Column(columnDefinition = "TEXT")
     private String cancellationPolicy;
 
-    @Column(columnDefinition = "TEXT")
-    private String transportation;
 
     // ===== MEDIA (URLs only) ===== this need to be verified
     @ElementCollection
@@ -99,6 +130,10 @@ public class TravelPackage {
     // ===== META =====
     @Enumerated(EnumType.STRING)
     private PackageStatus status;
+
+    @NotNull(message = "Package type is required")
+    @Enumerated(EnumType.STRING)
+    private PackageType packageType;
 
     private Boolean featured;
 
@@ -122,14 +157,30 @@ public class TravelPackage {
         updatedAt = LocalDateTime.now();
     }
 
-    public enum FeatureType {
-        INCLUDED,
-        EXCLUDED
-    }
-
     public enum PackageStatus {
         ACTIVE,
         FULL,
         CANCELLED
+    }
+
+    public enum PackageType {
+        HILLS("Mountains", "🏔️"),
+        BEACH("Beach", "🏖️"),
+        CITY("City Tour", "🏙️"),
+        PILGRIMAGE("Yatra", "🛕"),
+        ADVENTURE("Adventure", "🧗"),
+        WILDLIFE("Nature & Wildlife", "🌲"),
+        ROAD_TRIP("Road Trip", "🚗");
+
+        private final String label;
+        private final String icon;
+
+        PackageType(String label, String icon) {
+            this.label = label;
+            this.icon = icon;
+        }
+
+        public String getLabel() { return label; }
+        public String getIcon() { return icon; }
     }
 }
