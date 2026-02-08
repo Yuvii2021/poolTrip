@@ -21,6 +21,8 @@ app:
   jwt:
     secret: TravelHubSecretKey2024VeryLongSecureKeyForJWTTokenGeneration123456789
     expiration: 86400000 # 24 hours in milliseconds
+  upload:
+    dir: uploads
 
 logging:
   level:

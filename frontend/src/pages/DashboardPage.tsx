@@ -1,20 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Package, Plus, Edit2, Trash2, Eye, Star, TrendingUp, Users,
-  DollarSign, Calendar, X, Check, MapPin, Sparkles, Upload, Image
+  Package, Plus, Edit2, Trash2, Eye, 
+  Calendar, X, Check, MapPin, Sparkles, Upload, Image
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { packageAPI } from '../services/api';
-import { TravelPackage, PackageRequest, PackageType } from '../types';
+import { TravelPackage, PackageRequest, PackageType, VehicleType, PackageTypeOption, TransportationOption } from '../types';
+import { LocationAutocomplete } from '../components/LocationAutocomplete';
 import styles from './DashboardPage.module.css';
 
-const packageTypes: PackageType[] = [
-  'ADVENTURE', 'BEACH', 'CULTURAL', 'HONEYMOON', 'FAMILY',
-  'PILGRIMAGE', 'WILDLIFE', 'CRUISE', 'LUXURY', 'BUDGET'
-];
 
-const initialFormData: PackageRequest = {
+const getInitialFormData = (packageTypes: PackageTypeOption[], transportationOptions: TransportationOption[]): PackageRequest => ({
   title: '',
   destination: '',
   origin: '',
@@ -23,14 +20,17 @@ const initialFormData: PackageRequest = {
   discountedPrice: undefined,
   durationDays: 1,
   durationNights: 0,
+  startDate: '',
+  endDate: '',
   totalSeats: 10,
-  packageType: 'ADVENTURE',
+  packageType: (packageTypes[0]?.value as PackageType) || 'ADVENTURE',
+  vehicleType: (transportationOptions[0]?.value as VehicleType) || 'CAR',
   coverImage: '',
   inclusions: '',
   exclusions: '',
-  itinerary: '',
+  itinerary: [''],
   featured: false,
-};
+});
 
 // Helper to convert array to comma-separated string
 const arrayToString = (arr: string[] | string | undefined): string => {
@@ -45,16 +45,34 @@ export const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingPackage, setEditingPackage] = useState<TravelPackage | null>(null);
-  const [formData, setFormData] = useState<PackageRequest>(initialFormData);
+  const [formData, setFormData] = useState<PackageRequest>(() => getInitialFormData([], []));
   const [saving, setSaving] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string>('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [packageTypes, setPackageTypes] = useState<PackageTypeOption[]>([]);
+  const [transportationOptions, setTransportationOptions] = useState<TransportationOption[]>([]);
   const multiFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadPackages();
+    loadFilterOptions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const options = await packageAPI.getFilterOptions();
+      const types = options.packageTypes || [];
+      const transport = options.transportationOptions || [];
+      setPackageTypes(types);
+      setTransportationOptions(transport);
+      // Update form defaults if form is empty/reset
+      if (!formData.title && !formData.destination) {
+        setFormData(getInitialFormData(types, transport));
+      }
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    }
+  };
 
   const loadPackages = async () => {
     try {
@@ -76,13 +94,26 @@ export const DashboardPage = () => {
         if (Array.isArray(pkg.images)) {
           existingImages = pkg.images;
         } else if (typeof pkg.images === 'string') {
+          const imgStr = pkg.images;
           try {
-            existingImages = JSON.parse(pkg.images);
+            const parsed = JSON.parse(imgStr);
+            existingImages = Array.isArray(parsed) ? parsed : [];
           } catch {
-            existingImages = pkg.images.split(',').map(s => s.trim()).filter(Boolean);
+            existingImages = imgStr.split(',').map((s: string) => s.trim()).filter(Boolean);
           }
         }
       }
+      // Parse itinerary
+      let existingItinerary: string[] = [''];
+      if (pkg.itinerary) {
+        if (Array.isArray(pkg.itinerary)) {
+          existingItinerary = pkg.itinerary.length > 0 ? pkg.itinerary : [''];
+        } else if (typeof pkg.itinerary === 'string') {
+          existingItinerary = (pkg.itinerary as string).split(',').map((s: string) => s.trim()).filter(Boolean);
+          if (existingItinerary.length === 0) existingItinerary = [''];
+        }
+      }
+      
       setFormData({
         title: pkg.title,
         destination: pkg.destination,
@@ -92,21 +123,22 @@ export const DashboardPage = () => {
         discountedPrice: pkg.discountedPrice,
         durationDays: pkg.durationDays,
         durationNights: pkg.durationNights || 0,
+        startDate: pkg.startDate || '',
+        endDate: pkg.endDate || '',
         totalSeats: pkg.totalSeats,
         packageType: pkg.packageType,
+        vehicleType: pkg.vehicleType || 'CAR',
         coverImage: pkg.coverImage || '',
         images: existingImages.join(','),
         inclusions: arrayToString(pkg.inclusions),
         exclusions: arrayToString(pkg.exclusions),
-        itinerary: arrayToString(pkg.itinerary),
+        itinerary: existingItinerary,
         featured: pkg.featured,
       });
-      setImagePreview(pkg.coverImage || '');
       setAdditionalImages(existingImages);
     } else {
       setEditingPackage(null);
-      setFormData(initialFormData);
-      setImagePreview('');
+      setFormData(getInitialFormData(packageTypes, transportationOptions));
       setAdditionalImages([]);
     }
     setShowModal(true);
@@ -115,28 +147,8 @@ export const DashboardPage = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingPackage(null);
-    setFormData(initialFormData);
-    setImagePreview('');
+    setFormData(getInitialFormData(packageTypes, transportationOptions));
     setAdditionalImages([]);
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Convert to base64 for preview and storage
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setImagePreview(base64String);
-        setFormData({ ...formData, coverImage: base64String });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleImageUrlChange = (url: string) => {
-    setFormData({ ...formData, coverImage: url });
-    setImagePreview(url);
   };
 
   const handleMultipleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -175,6 +187,31 @@ export const DashboardPage = () => {
     });
   };
 
+  // Itinerary management functions
+  const handleAddItineraryDay = () => {
+    setFormData(prev => ({
+      ...prev,
+      itinerary: [...(prev.itinerary || []), '']
+    }));
+  };
+
+  const handleUpdateItineraryDay = (index: number, value: string) => {
+    setFormData(prev => {
+      const updated = [...(prev.itinerary || [])];
+      updated[index] = value;
+      return { ...prev, itinerary: updated };
+    });
+  };
+
+  const handleRemoveItineraryDay = (index: number) => {
+    setFormData(prev => {
+      const updated = (prev.itinerary || []).filter((_, i) => i !== index);
+      // Ensure at least one day remains
+      if (updated.length === 0) updated.push('');
+      return { ...prev, itinerary: updated };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -203,13 +240,6 @@ export const DashboardPage = () => {
     } catch (error) {
       console.error('Error deleting package:', error);
     }
-  };
-
-  const stats = {
-    total: packages.length,
-    active: packages.filter(p => p.status === 'ACTIVE').length,
-    featured: packages.filter(p => p.featured).length,
-    totalRevenue: packages.reduce((sum, p) => sum + p.price * (p.totalSeats - p.availableSeats), 0),
   };
 
   return (
@@ -241,71 +271,6 @@ export const DashboardPage = () => {
           </motion.button>
         </div>
       </header>
-
-      {/* Stats Grid */}
-      <section className={styles.statsSection}>
-        <div className={styles.statsGrid}>
-          <motion.div
-            className={styles.statCard}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div className={styles.statIcon}>
-              <Package size={24} />
-            </div>
-            <div className={styles.statContent}>
-              <span className={styles.statValue}>{stats.total}</span>
-              <span className={styles.statLabel}>Total Packages</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            className={`${styles.statCard} ${styles.statCardSuccess}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className={styles.statIcon}>
-              <TrendingUp size={24} />
-            </div>
-            <div className={styles.statContent}>
-              <span className={styles.statValue}>{stats.active}</span>
-              <span className={styles.statLabel}>Active Packages</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            className={`${styles.statCard} ${styles.statCardPrimary}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className={styles.statIcon}>
-              <Sparkles size={24} />
-            </div>
-            <div className={styles.statContent}>
-              <span className={styles.statValue}>{stats.featured}</span>
-              <span className={styles.statLabel}>Featured</span>
-            </div>
-          </motion.div>
-
-          <motion.div
-            className={`${styles.statCard} ${styles.statCardSecondary}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <div className={styles.statIcon}>
-              <DollarSign size={24} />
-            </div>
-            <div className={styles.statContent}>
-              <span className={styles.statValue}>₹{(stats.totalRevenue / 1000).toFixed(0)}K</span>
-              <span className={styles.statLabel}>Potential Revenue</span>
-            </div>
-          </motion.div>
-        </div>
-      </section>
 
       {/* Packages Table */}
       <section className={styles.packagesSection}>
@@ -454,29 +419,59 @@ export const DashboardPage = () => {
                       onChange={(e) => setFormData({ ...formData, packageType: e.target.value as PackageType })}
                     >
                       {packageTypes.map((type) => (
-                        <option key={type} value={type}>{type}</option>
+                        <option key={type.value} value={type.value}>
+                          {type.icon} {type.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Transport Mode *</label>
+                    <select
+                      value={formData.vehicleType || transportationOptions[0]?.value || 'CAR'}
+                      onChange={(e) => setFormData({ ...formData, vehicleType: e.target.value as VehicleType })}
+                    >
+                      {transportationOptions.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.icon} {type.label}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   <div className={styles.formGroup}>
                     <label>Destination *</label>
-                    <input
-                      type="text"
+                    <LocationAutocomplete
                       value={formData.destination}
-                      onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                      onChange={(value, location) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          destination: value,
+                          destinationLatitude: location?.latitude,
+                          destinationLongitude: location?.longitude,
+                        }));
+                      }}
                       placeholder="e.g., Kashmir"
                       required
+                      showIcon={false}
                     />
                   </div>
 
                   <div className={styles.formGroup}>
                     <label>Origin</label>
-                    <input
-                      type="text"
-                      value={formData.origin}
-                      onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
+                    <LocationAutocomplete
+                      value={formData.origin || ''}
+                      onChange={(value, location) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          origin: value,
+                          originLatitude: location?.latitude,
+                          originLongitude: location?.longitude,
+                        }));
+                      }}
                       placeholder="e.g., Delhi"
+                      showIcon={false}
                     />
                   </div>
 
@@ -523,6 +518,27 @@ export const DashboardPage = () => {
                   </div>
 
                   <div className={styles.formGroup}>
+                    <label>Departure Date *</label>
+                    <input
+                      type="date"
+                      value={formData.startDate || ''}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Return Date *</label>
+                    <input
+                      type="date"
+                      value={formData.endDate || ''}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      min={formData.startDate || ''}
+                      required
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
                     <label>Total Seats *</label>
                     <input
                       type="number"
@@ -556,56 +572,7 @@ export const DashboardPage = () => {
                   />
                 </div>
 
-                {/* Cover Image Section */}
-                <div className={styles.formGroup}>
-                  <label>
-                    <Image size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                    Cover Image (Main)
-                  </label>
-                  <div className={styles.imageUploadSection}>
-                    <div className={styles.imageInputWrapper}>
-                      <input
-                        type="text"
-                        value={formData.coverImage || ''}
-                        onChange={(e) => handleImageUrlChange(e.target.value)}
-                        placeholder="Paste image URL here..."
-                      />
-                      <span className={styles.orDivider}>or</span>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleImageUpload}
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.uploadBtn}
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload size={16} />
-                        Upload
-                      </button>
-                    </div>
-                    {imagePreview && (
-                      <div className={styles.imagePreview}>
-                        <img src={imagePreview} alt="Preview" />
-                        <button
-                          type="button"
-                          className={styles.removeImage}
-                          onClick={() => {
-                            setImagePreview('');
-                            setFormData({ ...formData, coverImage: '' });
-                          }}
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Additional Images Section */}
+                {/* Gallery Images Section */}
                 <div className={styles.formGroup}>
                   <label>
                     <Image size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
@@ -689,13 +656,51 @@ export const DashboardPage = () => {
 
                 {/* Itinerary */}
                 <div className={styles.formGroup}>
-                  <label>Itinerary (comma-separated days)</label>
-                  <textarea
-                    value={formData.itinerary || ''}
-                    onChange={(e) => setFormData({ ...formData, itinerary: e.target.value })}
-                    placeholder="e.g., Day 1: Arrival and check-in, Day 2: City tour, Day 3: Adventure activities..."
-                    rows={3}
-                  />
+                  <label>
+                    <Calendar size={16} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                    Itinerary
+                  </label>
+                  <div className={styles.itineraryContainer}>
+                    {(formData.itinerary || ['']).map((day, index) => (
+                      <motion.div
+                        key={index}
+                        className={styles.itineraryCard}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <div className={styles.itineraryHeader}>
+                          <span className={styles.dayBadge}>Day {index + 1}</span>
+                          {(formData.itinerary || []).length > 1 && (
+                            <button
+                              type="button"
+                              className={styles.removeItineraryBtn}
+                              onClick={() => handleRemoveItineraryDay(index)}
+                            >
+                              <X size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <textarea
+                          value={day}
+                          onChange={(e) => handleUpdateItineraryDay(index, e.target.value)}
+                          placeholder={`Describe activities for Day ${index + 1}...`}
+                          rows={2}
+                          className={styles.itineraryInput}
+                        />
+                      </motion.div>
+                    ))}
+                    <motion.button
+                      type="button"
+                      className={styles.addItineraryBtn}
+                      onClick={handleAddItineraryDay}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Plus size={18} />
+                      Add Day {(formData.itinerary || []).length + 1}
+                    </motion.button>
+                  </div>
                 </div>
 
                 <div className={styles.modalFooter}>

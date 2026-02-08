@@ -23,6 +23,9 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
     
+    // DEMO MODE: Set to false for production OTP verification
+    private static final boolean DEMO_MODE = true;
+    
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -30,7 +33,12 @@ public class AuthService {
     private final OtpVerificationRepository otpVerificationRepository;
     
     private void verifyOtp(String phone, String otp) {
+        // DEMO MODE: Accept any OTP for demo purposes
+        if (DEMO_MODE) {
+            return; // Accept any OTP in demo mode
+        }
 
+        // Production OTP verification
         OtpVerification otpVerification = otpVerificationRepository
                 .findTopByPhoneOrderByExpiresAtDesc(phone)
                 .orElseThrow(() -> new RuntimeException("OTP not found"));
@@ -130,7 +138,7 @@ public class AuthService {
         if (updateAuth.getWhatsappNumber() != null && !updateAuth.getWhatsappNumber().isBlank()) {
             user.setWhatsappNumber(updateAuth.getWhatsappNumber());
         }
-        // DO NOT allow updates for:
+    // DO NOT allow updates for:
         // email, password, rating, reviewCount, numberOfTrips
         return userRepository.save(user);
     }
@@ -138,6 +146,50 @@ public class AuthService {
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    public void sendOtpForRegistration(String phone) {
+        // For now, always send OTP and return success
+        // TODO: Later add validation to check if phone already exists
+        // TODO: Integrate SMS provider to actually send OTP
+        
+        try {
+            // Send OTP for registration
+            otpSending(Long.parseLong(phone));
+        } catch (Exception e) {
+            // For demo purposes, always return success even if there's an error
+            // TODO: Remove this catch block and add proper error handling later
+            System.out.println("Error sending OTP (ignored for demo): " + e.getMessage());
+        }
+        
+        // TODO: Send SMS with OTP
+        // For now, OTP is saved in database and can be retrieved for testing
+    }
+
+    public void forgotPassword(String phone) {
+        // Check if user exists
+        if (!userRepository.existsByPhone(phone)) {
+            throw new RuntimeException("User not found with this phone number");
+        }
+        
+        // Send OTP for password reset
+        otpSending(Long.parseLong(phone));
+        
+        // TODO: Send SMS with OTP
+        // For now, OTP is saved in database and can be retrieved for testing
+    }
+
+    public void resetPassword(String phone, String otp, String newPassword) {
+        // Verify OTP
+        verifyOtp(phone, otp);
+        
+        // Find user
+        User user = userRepository.findByPhone(phone)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Update password
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
 }

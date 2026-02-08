@@ -4,6 +4,7 @@ import com.travelhub.entity.TravelPackage;
 import com.travelhub.entity.User;
 import com.travelhub.enums.Transportation;
 import com.travelhub.entity.TravelPackage.PackageStatus;
+import com.travelhub.entity.TravelPackage.PackageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -40,6 +41,11 @@ public class PackageResponse {
     private String cancellationPolicy;
     private String coverImage;
     private Transportation transportation;
+    private String transportationLabel; // Display label from Transportation enum
+    private String transportationIcon; // Display icon/emoji from Transportation enum
+    private PackageType packageType;
+    private String packageTypeLabel; // Display label from PackageType enum
+    private String packageTypeIcon; // Display icon/emoji from PackageType enum
     private List<String> images;
     private PackageStatus status;
     private Boolean featured;
@@ -70,9 +76,17 @@ public class PackageResponse {
                 .termsAndConditions(pkg.getTermsAndConditions())
                 .cancellationPolicy(pkg.getCancellationPolicy())
                 .images(pkg.getImageUrls())
+                .coverImage(pkg.getImageUrls() != null && !pkg.getImageUrls().isEmpty() 
+                    ? pkg.getImageUrls().get(0) 
+                    : null)
                 .status(pkg.getStatus())
                 .featured(pkg.getFeatured())
                 .transportation(pkg.getTransportation())
+                .transportationLabel(pkg.getTransportation() != null ? pkg.getTransportation().getLabel() : null)
+                .transportationIcon(pkg.getTransportation() != null ? pkg.getTransportation().getIcon() : null)
+                .packageType(pkg.getPackageType())
+                .packageTypeLabel(pkg.getPackageType() != null ? pkg.getPackageType().getLabel() : null)
+                .packageTypeIcon(pkg.getPackageType() != null ? pkg.getPackageType().getIcon() : null)
                 .rating(user.getRating())
                 .userId(user.getId())
                 .reviewCount(user.getReviewCount())

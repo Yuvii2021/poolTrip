@@ -105,11 +105,13 @@ public class TravelPackage {
     // ===== TRANSPORT =====
     @NotNull(message = "Transportation type is required")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true) // Temporarily nullable to allow schema migration
     private Transportation transportation;
 
     // ===== ITINERARY =====
-    @Column(columnDefinition = "TEXT")
+    @ElementCollection
+    @CollectionTable(name = "package_itinerary", joinColumns = @JoinColumn(name = "package_id"))
+    @Column(name = "itinerary_item")
     private List<String> itinerary;
 
 
@@ -170,7 +172,8 @@ public class TravelPackage {
         PILGRIMAGE("Yatra", "🛕"),
         ADVENTURE("Adventure", "🧗"),
         WILDLIFE("Nature & Wildlife", "🌲"),
-        ROAD_TRIP("Road Trip", "🚗");
+        ROAD_TRIP("Road Trip", "🚗"),
+        HONEYMOON("Honeymoon", "💑");
 
         private final String label;
         private final String icon;

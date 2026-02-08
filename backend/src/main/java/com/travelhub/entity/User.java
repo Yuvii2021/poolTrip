@@ -30,6 +30,8 @@ public class User {
     
     private String whatsappNumber;
 
+    private String profilePhoto;
+
     private Double rating;
 
     private Integer reviewCount;

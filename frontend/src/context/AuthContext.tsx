@@ -7,7 +7,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
 }
@@ -17,6 +17,7 @@ interface RegisterData {
   password: string;
   fullName: string;
   phone: string;
+  Otp: string;
   role: UserRole;
   agencyName?: string;
   agencyDescription?: string;
@@ -51,8 +52,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
+  const login = async (phone: string, password: string) => {
+    const response = await authAPI.login(phone, password);
     handleAuthResponse(response);
   };
 

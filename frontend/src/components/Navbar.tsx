@@ -1,16 +1,34 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, User, LogOut, LayoutDashboard, Home, Plus, Users } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { packageAPI } from '../services/api';
+import { PackageTypeOption } from '../types';
+import { 
+  Menu, X, ChevronDown, User, LogOut, 
+  Compass, PlusCircle
+} from 'lucide-react';
 import styles from './Navbar.module.css';
 
+const destinations = [
+  { name: 'Kashmir', slug: 'kashmir', emoji: '🏔️' },
+  { name: 'Goa', slug: 'goa', emoji: '🏖️' },
+  { name: 'Kerala', slug: 'kerala', emoji: '🌴' },
+  { name: 'Rajasthan', slug: 'rajasthan', emoji: '🏰' },
+  { name: 'Ladakh', slug: 'ladakh', emoji: '🗻' },
+  { name: 'Andaman', slug: 'andaman', emoji: '🐚' },
+  { name: 'Sikkim', slug: 'sikkim', emoji: '🌸' },
+  { name: 'Himachal', slug: 'himachal', emoji: '❄️' },
+];
+
 export const Navbar = () => {
+  const { user, logout } = useAuth();
+  const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [packageTypes, setPackageTypes] = useState<PackageTypeOption[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,113 +38,186 @@ export const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const isOutsideNavLinks = dropdownRef.current && !dropdownRef.current.contains(target);
+      const isOutsideUserDropdown = userDropdownRef.current && !userDropdownRef.current.contains(target);
+      
+      // Only close if clicking outside both dropdown areas
+      if (isOutsideNavLinks && isOutsideUserDropdown) {
+        setActiveDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     setIsMobileMenuOpen(false);
+    setActiveDropdown(null);
+  }, [location]);
+
+  useEffect(() => {
+    loadFilterOptions();
+  }, []);
+
+  const loadFilterOptions = async () => {
+    try {
+      const options = await packageAPI.getFilterOptions();
+      setPackageTypes(options.packageTypes || []);
+    } catch (error) {
+      console.error('Error loading filter options:', error);
+    }
   };
 
+  const isHomePage = location.pathname === '/';
+  const navbarClass = `${styles.navbar} ${isScrolled || !isHomePage ? styles.scrolled : ''}`;
+
   return (
-    <motion.nav
-      className={`${styles.navbar} ${isScrolled ? styles.scrolled : ''}`}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-    >
+    <nav className={navbarClass}>
       <div className={styles.container}>
         {/* Logo */}
         <Link to="/" className={styles.logo}>
-          <motion.div
-            className={styles.logoIcon}
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            transition={{ type: 'spring', stiffness: 400 }}
-          >
-            <Users size={22} strokeWidth={2.5} />
-          </motion.div>
-          <div className={styles.logoTextWrapper}>
-            <span className={styles.logoText}>Pool<span className={styles.logoAccent}>Trip</span></span>
-            <span className={styles.logoTagline}>Travel Together</span>
+          <div className={styles.logoIcon}>
+            <Compass size={24} />
           </div>
+          <span className={styles.logoText}>
+            <span className={styles.logoMain}>Pool</span>
+            <span className={styles.logoAccent}>Trip</span>
+          </span>
         </Link>
 
         {/* Desktop Navigation */}
-        <div className={styles.desktopNav}>
-          <Link
-            to="/"
-            className={`${styles.navLink} ${location.pathname === '/' ? styles.active : ''}`}
-          >
-            <Home size={18} />
-            Explore
+        <div className={styles.navLinks} ref={dropdownRef}>
+          <Link to="/" className={`${styles.navLink} ${location.pathname === '/' ? styles.active : ''}`}>
+            Home
           </Link>
-          
-          {isAuthenticated ? (
-            <>
-              {user?.role === 'AGENCY' && (
-                <Link
-                  to="/dashboard"
-                  className={`${styles.navLink} ${location.pathname === '/dashboard' ? styles.active : ''}`}
-                >
-                  <LayoutDashboard size={18} />
-                  My Trips
-                </Link>
-              )}
-              
-              {user?.role === 'AGENCY' && (
-                <Link to="/dashboard" className={styles.postTripBtn}>
-                  <Plus size={18} />
-                  Post a Trip
-                </Link>
-              )}
-              
-              <div className={styles.userMenu}>
-                <button className={styles.userButton}>
-                  <div className={styles.avatar}>
-                    {user?.fullName?.charAt(0) || 'U'}
-                  </div>
-                  <span className={styles.userName}>{user?.fullName?.split(' ')[0]}</span>
-                </button>
-                <div className={styles.dropdown}>
-                  <div className={styles.dropdownHeader}>
-                    <div className={styles.dropdownAvatar}>
-                      {user?.fullName?.charAt(0) || 'U'}
-                    </div>
-                    <div className={styles.dropdownInfo}>
-                      <span className={styles.dropdownName}>{user?.fullName}</span>
-                      <span className={styles.dropdownRole}>
-                        {user?.role === 'AGENCY' ? '🚐 Trip Host' : '🎒 Traveler'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.dropdownDivider} />
-                  <button onClick={handleLogout} className={styles.dropdownItem}>
-                    <LogOut size={16} />
-                    Sign Out
-                  </button>
+
+          {/* Destinations Dropdown */}
+          <div className={styles.dropdown}>
+            <button 
+              className={`${styles.navLink} ${styles.dropdownTrigger}`}
+              onClick={() => setActiveDropdown(activeDropdown === 'destinations' ? null : 'destinations')}
+            >
+              Destinations <ChevronDown size={16} className={activeDropdown === 'destinations' ? styles.rotated : ''} />
+            </button>
+            {activeDropdown === 'destinations' && (
+              <div className={styles.dropdownMenu}>
+                <div className={styles.dropdownGrid}>
+                  {destinations.map((dest) => (
+                    <Link 
+                      key={dest.slug} 
+                      to={`/destinations/${dest.slug}`} 
+                      className={styles.dropdownItem}
+                    >
+                      <span className={styles.dropdownEmoji}>{dest.emoji}</span>
+                      <span>{dest.name}</span>
+                    </Link>
+                  ))}
+                </div>
+                <div className={styles.dropdownFooter}>
+                  <Link to="/destinations" className={styles.viewAllLink}>
+                    View All Destinations <ChevronDown size={14} className={styles.rotatedRight} />
+                  </Link>
                 </div>
               </div>
-            </>
-          ) : (
-            <div className={styles.authButtons}>
-              <Link to="/login" className={styles.loginBtn}>
-                Sign In
-              </Link>
-              <Link to="/register" className={styles.registerBtn}>
-                <span>Start Pooling</span>
-                <motion.span
-                  className={styles.btnArrow}
-                  initial={{ x: 0 }}
-                  whileHover={{ x: 4 }}
-                >
-                  →
-                </motion.span>
-              </Link>
+            )}
+          </div>
+
+          {/* Categories Dropdown */}
+          <div className={styles.dropdown}>
+            <button 
+              className={`${styles.navLink} ${styles.dropdownTrigger}`}
+              onClick={() => setActiveDropdown(activeDropdown === 'categories' ? null : 'categories')}
+            >
+              Categories <ChevronDown size={16} className={activeDropdown === 'categories' ? styles.rotated : ''} />
+            </button>
+            {activeDropdown === 'categories' && (
+              <div className={styles.dropdownMenu}>
+                <div className={styles.dropdownGrid}>
+                  {packageTypes.map((cat) => (
+                    <Link 
+                      key={cat.value} 
+                      to={`/categories/${cat.value}`} 
+                      className={styles.dropdownItem}
+                    >
+                      <span className={styles.dropdownEmoji}>{cat.icon}</span>
+                      <span>{cat.label}</span>
+                    </Link>
+                  ))}
+                </div>
+                <div className={styles.dropdownFooter}>
+                  <Link to="/categories" className={styles.viewAllLink}>
+                    View All Categories <ChevronDown size={14} className={styles.rotatedRight} />
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side Actions */}
+        <div className={styles.navActions}>
+          <Link 
+            to={user ? "/dashboard?action=create" : "/login?redirect=create"} 
+            className={styles.publishBtn}
+          >
+            <PlusCircle size={18} />
+            <span>Publish a Trip</span>
+          </Link>
+
+          {user ? (
+            <div className={styles.dropdown} ref={userDropdownRef}>
+              <button 
+                className={styles.userBtn}
+                onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
+              >
+                <User size={18} />
+                <span>{user.fullName.split(' ')[0]}</span>
+                <ChevronDown size={14} />
+              </button>
+              {activeDropdown === 'user' && (
+                <div className={`${styles.dropdownMenu} ${styles.userMenu}`}>
+                  <Link 
+                    to="/profile" 
+                    className={styles.dropdownItem}
+                    onClick={() => setActiveDropdown(null)}
+                  >
+                    <User size={16} />
+                    <span>Profile</span>
+                  </Link>
+                  <Link 
+                    to="/dashboard" 
+                    className={styles.dropdownItem}
+                    onClick={() => setActiveDropdown(null)}
+                  >
+                    <Compass size={16} />
+                    <span>Dashboard</span>
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      setActiveDropdown(null);
+                      logout();
+                    }} 
+                    className={styles.dropdownItem}
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
+          ) : (
+            <Link to="/login" className={styles.loginBtn}>
+              Login
+            </Link>
           )}
         </div>
 
         {/* Mobile Menu Toggle */}
-        <button
-          className={styles.mobileToggle}
+        <button 
+          className={styles.mobileMenuBtn}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -134,73 +225,67 @@ export const Navbar = () => {
       </div>
 
       {/* Mobile Menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            className={styles.mobileMenu}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Link
-              to="/"
-              className={styles.mobileLink}
-              onClick={() => setIsMobileMenuOpen(false)}
+      {isMobileMenuOpen && (
+        <div className={styles.mobileMenu}>
+          <Link to="/" className={styles.mobileNavLink}>Home</Link>
+          
+          <div className={styles.mobileDropdown}>
+            <button 
+              className={styles.mobileNavLink}
+              onClick={() => setActiveDropdown(activeDropdown === 'mobile-dest' ? null : 'mobile-dest')}
             >
-              <Home size={20} />
-              Explore Trips
-            </Link>
-            
-            {isAuthenticated ? (
-              <>
-                {user?.role === 'AGENCY' && (
-                  <Link
-                    to="/dashboard"
-                    className={styles.mobileLink}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <LayoutDashboard size={20} />
-                    My Trips
+              Destinations <ChevronDown size={16} className={activeDropdown === 'mobile-dest' ? styles.rotated : ''} />
+            </button>
+            {activeDropdown === 'mobile-dest' && (
+              <div className={styles.mobileSubmenu}>
+                {destinations.map((dest) => (
+                  <Link key={dest.slug} to={`/destinations/${dest.slug}`} className={styles.mobileSubLink}>
+                    {dest.emoji} {dest.name}
                   </Link>
-                )}
-                <div className={styles.mobileUserInfo}>
-                  <div className={styles.mobileAvatar}>
-                    {user?.fullName?.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <span className={styles.mobileUserName}>{user?.fullName}</span>
-                    <span className={styles.mobileUserRole}>
-                      {user?.role === 'AGENCY' ? '🚐 Trip Host' : '🎒 Traveler'}
-                    </span>
-                  </div>
-                </div>
-                <button onClick={handleLogout} className={styles.mobileLogout}>
-                  <LogOut size={20} />
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <div className={styles.mobileAuth}>
-                <Link
-                  to="/login"
-                  className={styles.mobileLoginBtn}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/register"
-                  className={styles.mobileRegisterBtn}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Start Pooling →
-                </Link>
+                ))}
               </div>
             )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.nav>
+          </div>
+
+          <div className={styles.mobileDropdown}>
+            <button 
+              className={styles.mobileNavLink}
+              onClick={() => setActiveDropdown(activeDropdown === 'mobile-cat' ? null : 'mobile-cat')}
+            >
+              Categories <ChevronDown size={16} className={activeDropdown === 'mobile-cat' ? styles.rotated : ''} />
+            </button>
+            {activeDropdown === 'mobile-cat' && (
+              <div className={styles.mobileSubmenu}>
+                {packageTypes.map((cat) => (
+                  <Link key={cat.value} to={`/categories/${cat.value}`} className={styles.mobileSubLink}>
+                    {cat.icon} {cat.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <Link 
+            to={user ? "/dashboard?action=create" : "/login?redirect=create"} 
+            className={styles.mobilePublishBtn}
+          >
+            <PlusCircle size={18} />
+            Publish a Trip
+          </Link>
+
+          <div className={styles.mobileActions}>
+            {user ? (
+              <>
+                <Link to="/profile" className={styles.mobileNavLink}>Profile</Link>
+                <Link to="/dashboard" className={styles.mobileNavLink}>Dashboard</Link>
+                <button onClick={logout} className={styles.mobileNavLink}>Logout</button>
+              </>
+            ) : (
+              <Link to="/login" className={styles.mobileLoginBtn}>Login</Link>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
   );
 };

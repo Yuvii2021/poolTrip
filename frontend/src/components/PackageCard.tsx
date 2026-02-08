@@ -10,38 +10,24 @@ interface PackageCardProps {
   featured?: boolean;
 }
 
-const packageTypeEmojis: Record<string, string> = {
-  ADVENTURE: '🏔️',
-  BEACH: '🏖️',
-  CULTURAL: '🏛️',
-  HONEYMOON: '💑',
-  FAMILY: '👨‍👩‍👧‍👦',
-  PILGRIMAGE: '🛕',
-  WILDLIFE: '🦁',
-  CRUISE: '🚢',
-  LUXURY: '💎',
-  BUDGET: '💰',
-};
-
-const vehicleIcons: Record<string, React.ReactNode> = {
-  CAR: <Car size={14} />,
-  BUS: <Bus size={14} />,
-  MINI_BUS: <Bus size={14} />,
-  TEMPO: <Car size={14} />,
-  SUV: <Car size={14} />,
-};
-
-const defaultImages: Record<string, string> = {
-  ADVENTURE: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800',
-  BEACH: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
-  CULTURAL: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=800',
-  HONEYMOON: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800',
-  FAMILY: 'https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=800',
-  PILGRIMAGE: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=800',
-  WILDLIFE: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800',
-  CRUISE: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?w=800',
-  LUXURY: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800',
-  BUDGET: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800',
+// Helper function to get vehicle icon - uses backend icon if available, otherwise determines from type
+const getVehicleIcon = (transportationIcon?: string, transportationType?: string): React.ReactNode => {
+  // If backend provides icon emoji, use it
+  if (transportationIcon) {
+    return <span style={{ fontSize: '14px' }}>{transportationIcon}</span>;
+  }
+  
+  // Fallback: determine icon component based on transportation type prefix
+  if (!transportationType) return <Car size={14} />;
+  
+  const upperType = transportationType.toUpperCase();
+  if (upperType.startsWith('BUS')) {
+    return <Bus size={14} />;
+  } else if (upperType.startsWith('CAR') || upperType.startsWith('SUV') || upperType.startsWith('TEMPO')) {
+    return <Car size={14} />;
+  } else {
+    return <Car size={14} />; // Default icon
+  }
 };
 
 export const PackageCard = ({ pkg, index = 0, featured = false }: PackageCardProps) => {
@@ -50,7 +36,8 @@ export const PackageCard = ({ pkg, index = 0, featured = false }: PackageCardPro
     ? Math.round(((pkg.price - pkg.discountedPrice!) / pkg.price) * 100)
     : 0;
 
-  const imageUrl = pkg.coverImage || defaultImages[pkg.packageType] || defaultImages.ADVENTURE;
+  // Use coverImage from backend, fallback to first image, then undefined (let CSS handle default)
+  const imageUrl = pkg.coverImage || (pkg.images && pkg.images.length > 0 ? pkg.images[0] : undefined);
   
   const filledSeats = pkg.totalSeats - pkg.availableSeats;
   const fillPercent = (filledSeats / pkg.totalSeats) * 100;
@@ -58,6 +45,19 @@ export const PackageCard = ({ pkg, index = 0, featured = false }: PackageCardPro
   // Generate seat dots (max 10 for display)
   const displaySeats = Math.min(pkg.totalSeats, 10);
   const displayFilled = Math.round((filledSeats / pkg.totalSeats) * displaySeats);
+  
+  // Get transportation value (backend sends 'transportation', frontend might use 'vehicleType')
+  const transportationValue = pkg.transportation || pkg.vehicleType;
+  console.log(transportationValue);
+  // Debug: Log transportation value to verify it's being received
+  if (process.env.NODE_ENV === 'development' && !transportationValue) {
+    console.log('Package missing transportation:', { 
+      id: pkg.id, 
+      title: pkg.title, 
+      transportation: pkg.transportation, 
+      vehicleType: pkg.vehicleType 
+    });
+  }
 
   return (
     <motion.div
@@ -71,7 +71,7 @@ export const PackageCard = ({ pkg, index = 0, featured = false }: PackageCardPro
         {/* Image Section */}
         <div className={styles.imageWrapper}>
           <img
-            src={imageUrl}
+            src={imageUrl || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23ddd" width="400" height="300"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="20" dy="10.5" font-weight="bold" x="50%25" y="50%25" text-anchor="middle"%3ENo Image%3C/text%3E%3C/svg%3E'}
             alt={pkg.title}
             className={styles.image}
             loading="lazy"
@@ -93,19 +93,29 @@ export const PackageCard = ({ pkg, index = 0, featured = false }: PackageCardPro
             )}
           </div>
           
-          {/* Type Badge */}
+          {/* Type Badge - Always show, prioritize backend data */}
           <div className={styles.typeBadge}>
-            <span className={styles.typeEmoji}>{packageTypeEmojis[pkg.packageType]}</span>
-            <span>{pkg.packageType}</span>
+            <span className={styles.typeEmoji}>{pkg.packageTypeIcon || '📦'}</span>
+            <span>{pkg.packageTypeLabel || pkg.packageType}</span>
           </div>
 
-          {/* Vehicle Badge if available */}
-          {pkg.vehicleType && (
+          {/* Vehicle Badge - Show if transportation data exists */}
+          {(pkg.transportationIcon || pkg.transportationLabel || transportationValue) && (
             <div className={styles.vehicleBadge}>
-              {vehicleIcons[pkg.vehicleType]}
-              <span>{pkg.vehicleType.replace('_', ' ')}</span>
+              {pkg.transportationIcon ? (
+                <span style={{ fontSize: '14px' }}>{pkg.transportationIcon}</span>
+              ) : (
+                getVehicleIcon(undefined, transportationValue)
+              )}
+              <span>{pkg.transportationLabel || transportationValue}</span>
             </div>
           )}
+          
+          {/* Duration Badge - Make it more visible */}
+          <div className={styles.durationBadge}>
+            <Calendar size={12} />
+            <span>{pkg.durationDays}D/{pkg.durationNights || pkg.durationDays - 1}N</span>
+          </div>
         </div>
 
         {/* Content Section */}
@@ -138,10 +148,16 @@ export const PackageCard = ({ pkg, index = 0, featured = false }: PackageCardPro
 
           {/* Meta Info */}
           <div className={styles.meta}>
-            <div className={styles.metaItem}>
-              <Calendar size={14} />
-              <span>{pkg.durationDays}D / {pkg.durationNights || pkg.durationDays - 1}N</span>
-            </div>
+            {(pkg.transportationIcon || pkg.transportationLabel || transportationValue) && (
+              <div className={styles.metaItem}>
+                {pkg.transportationIcon ? (
+                  <span style={{ fontSize: '14px' }}>{pkg.transportationIcon}</span>
+                ) : (
+                  getVehicleIcon(undefined, transportationValue)
+                )}
+                <span>{pkg.transportationLabel || transportationValue}</span>
+              </div>
+            )}
             {pkg.startDate && (
               <div className={styles.metaItem}>
                 <Clock size={14} />

@@ -1,5 +1,7 @@
 package com.travelhub.enums;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum Transportation {
 
     // ===== BUS =====
@@ -47,5 +49,10 @@ public enum Transportation {
 
     public String getIcon() {
         return icon;
+    }
+    
+    @JsonValue
+    public String getValue() {
+        return name(); // Returns enum name like "BUS_AC", "CAR_SUV", etc.
     }
 }

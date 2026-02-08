@@ -65,6 +65,23 @@ public class PackageService {
                 })
                 .toList();
     }
+    
+    public List<PackageResponse> getAllPackagesWithFilters(HashMap<String, requestFilter> filters) {
+        List<TravelPackage> packages = Optional.ofNullable(
+            packageRepository.findAllActivePackagesWithFilters(filters)
+        ).orElse(List.of());
+        if (packages.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, User> idPerUser = userMapByPackages(packages);
+        return packages.stream()
+                .filter(Objects::nonNull)
+                .map(pkg -> {
+                    User user = idPerUser.get(pkg.getUserId());
+                    return PackageResponse.fromEntity(pkg, user);
+                })
+                .toList();
+    }
 
     public List<PackageResponse> getAllActivePackages() {
         List<TravelPackage> packages = packageRepository.findAllActivePackages();
@@ -127,11 +144,31 @@ public class PackageService {
                 })
                 .toList();
     }
+    
+    public List<PackageResponse> getPackagesByTypeWithFilters(PackageType type, HashMap<String, requestFilter> filters) {
+        List<TravelPackage> packages = Optional.ofNullable(
+            packageRepository.findByPackageTypeActiveWithFilters(type, filters)
+        ).orElse(List.of());
+        if (packages.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, User> idPerUser = userMapByPackages(packages);
+        return packages.stream()
+                .filter(Objects::nonNull)
+                .map(pkg -> {
+                    User user = idPerUser.get(pkg.getUserId());
+                    return PackageResponse.fromEntity(pkg, user);
+                })
+                .toList();
+    }
     public List<PackageResponse> getPackagesByTypeAndOrigin(PackageType type, 
         Double originLong, Double originLat, 
         Double maxDistanceSq, HashMap<String, 
         requestFilter> filters) {
-        List<TravelPackage> packages = Optional.ofNullable(packageRepository.findByPackageTypeActiveWithOrigin(type, originLong, originLat, maxDistanceSq)).orElse(List.of());
+        List<TravelPackage> packages = Optional.ofNullable(
+            packageRepository.findByPackageTypeActiveWithOriginAndFilters(type, originLong, originLat, maxDistanceSq, filters)
+        ).orElse(List.of());
+        
         if (packages.isEmpty()) {
             return List.of();
         }

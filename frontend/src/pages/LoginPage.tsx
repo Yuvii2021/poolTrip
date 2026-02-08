@@ -1,42 +1,67 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Car, Wallet, Shield } from 'lucide-react';
+import { Users, Phone, Lock, Eye, EyeOff, ArrowRight, Car, Compass, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import styles from './AuthPages.module.css';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const redirectTo = searchParams.get('redirect');
+
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+    // Limit to 10 digits
+    return digits.slice(0, 10);
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setPhone(formatted);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
     setLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/');
+      // Clean phone number before sending
+      const cleanPhone = phone.replace(/\D/g, '');
+      await login(cleanPhone, password);
+      if (redirectTo === 'create') {
+        navigate('/dashboard?action=create');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid credentials. Please try again.');
+      const errorData = err.response?.data;
+      
+      // Extract field-specific errors if available
+      if (errorData?.errors) {
+        setFieldErrors(errorData.errors);
+        // Set main error message from backend or combine field errors
+        const errorMessage = errorData.message || 
+          Object.values(errorData.errors).join(', ');
+        setError(errorMessage);
+      } else {
+        // Fallback to generic error message
+        setError(errorData?.message || 'Invalid credentials. Please try again.');
+      }
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fillDemoCredentials = (type: 'user' | 'agency') => {
-    if (type === 'user') {
-      setEmail('user@test.com');
-      setPassword('password123');
-    } else {
-      setEmail('wanderlust@agency.com');
-      setPassword('password123');
     }
   };
 
@@ -73,7 +98,7 @@ export const LoginPage = () => {
               <span className={styles.brandingTitleGradient}> Traveler</span>
             </h1>
             <p className={styles.brandingSubtitle}>
-              Sign in to find rides, join trips, and travel with your community.
+              Sign in to discover trips, publish your adventures, and connect with fellow travelers.
             </p>
 
             <div className={styles.features}>
@@ -82,17 +107,17 @@ export const LoginPage = () => {
                   <Car size={20} />
                 </div>
                 <div>
-                  <h4>Pool Rides</h4>
-                  <p>Share vehicles for intercity travel</p>
+                  <h4>Find Trips</h4>
+                  <p>Discover amazing adventures</p>
                 </div>
               </div>
               <div className={styles.feature}>
                 <div className={styles.featureIcon}>
-                  <Wallet size={20} />
+                  <Compass size={20} />
                 </div>
                 <div>
-                  <h4>Save 40%</h4>
-                  <p>Average savings on every trip</p>
+                  <h4>Publish Trips</h4>
+                  <p>Share your trips with others</p>
                 </div>
               </div>
               <div className={styles.feature}>
@@ -100,8 +125,8 @@ export const LoginPage = () => {
                   <Shield size={20} />
                 </div>
                 <div>
-                  <h4>Verified Hosts</h4>
-                  <p>Travel with trusted community</p>
+                  <h4>Trusted Community</h4>
+                  <p>Travel with verified members</p>
                 </div>
               </div>
             </div>
@@ -136,18 +161,23 @@ export const LoginPage = () => {
               )}
 
               <div className={styles.inputGroup}>
-                <label className={styles.label}>Email Address</label>
+                <label className={styles.label}>Phone Number</label>
                 <div className={styles.inputWrapper}>
-                  <Mail size={18} className={styles.inputIcon} />
+                  <Phone size={18} className={styles.inputIcon} />
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className={styles.input}
+                    type="tel"
+                    value={phone}
+                    onChange={handlePhoneChange}
+                    placeholder="9876543210"
+                    className={`${styles.input} ${fieldErrors.phone ? styles.inputError : ''}`}
                     required
+                    pattern="[6-9][0-9]{9}"
+                    maxLength={10}
                   />
                 </div>
+                {fieldErrors.phone && (
+                  <span className={styles.fieldError}>{fieldErrors.phone}</span>
+                )}
               </div>
 
               <div className={styles.inputGroup}>
@@ -159,7 +189,7 @@ export const LoginPage = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className={styles.input}
+                    className={`${styles.input} ${fieldErrors.password ? styles.inputError : ''}`}
                     required
                   />
                   <button
@@ -170,6 +200,15 @@ export const LoginPage = () => {
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <span className={styles.fieldError}>{fieldErrors.password}</span>
+                )}
+              </div>
+
+              <div className={styles.forgotPasswordLink}>
+                <Link to="/forgot-password" className={styles.link}>
+                  Forgot Password?
+                </Link>
               </div>
 
               <motion.button
@@ -188,39 +227,12 @@ export const LoginPage = () => {
                   </>
                 )}
               </motion.button>
-            </form>
 
-            {/* Demo Credentials */}
-            <div className={styles.demoSection}>
-              <div className={styles.demoHeader}>
-                <Sparkles size={16} />
-                <span>Quick Demo Access</span>
-              </div>
-              <div className={styles.demoButtons}>
-                <button
-                  type="button"
-                  onClick={() => fillDemoCredentials('user')}
-                  className={styles.demoBtn}
-                >
-                  <span className={styles.demoIcon}>🎒</span>
-                  <div>
-                    <span className={styles.demoLabel}>Traveler</span>
-                    <span className={styles.demoEmail}>user@test.com</span>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fillDemoCredentials('agency')}
-                  className={styles.demoBtn}
-                >
-                  <span className={styles.demoIcon}>🚐</span>
-                  <div>
-                    <span className={styles.demoLabel}>Trip Host</span>
-                    <span className={styles.demoEmail}>wanderlust@agency.com</span>
-                  </div>
-                </button>
-              </div>
-            </div>
+              <p className={styles.terms}>
+                Don't have an account?{' '}
+                <Link to="/register" className={styles.link}>Create one</Link>
+              </p>
+            </form>
           </div>
         </motion.div>
       </div>

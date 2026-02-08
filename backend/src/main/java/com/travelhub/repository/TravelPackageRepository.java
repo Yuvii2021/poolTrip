@@ -3,16 +3,16 @@ package com.travelhub.repository;
 import com.travelhub.entity.TravelPackage;
 import com.travelhub.entity.TravelPackage.PackageStatus;
 import com.travelhub.entity.TravelPackage.PackageType;
-import com.travelhub.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface TravelPackageRepository extends JpaRepository<TravelPackage, Long> {
+public interface TravelPackageRepository extends JpaRepository<TravelPackage, Long>, TravelPackageRepositoryCustom {
 
        List<TravelPackage> findByStatus(PackageStatus status);
 
@@ -50,8 +50,8 @@ public interface TravelPackageRepository extends JpaRepository<TravelPackage, Lo
 
        @Query("SELECT p FROM TravelPackage p WHERE p.status = 'ACTIVE' AND " +
                      "(LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
-                     "LOWER(p.destination) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                      "LOWER(p.destinationName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+                     "LOWER(p.originName) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
                      "LOWER(p.description) LIKE LOWER(CONCAT('%', :query, '%')))")
        List<TravelPackage> searchPackages(@Param("query") String query);
 
@@ -70,8 +70,8 @@ public interface TravelPackageRepository extends JpaRepository<TravelPackage, Lo
                             ) ASC
                      """)
        List<TravelPackage> findByDestinationContaining(
-                     @Param("originLong") Double destinationLong,
-                     @Param("originLat") Double destinationLat,
+                     @Param("destinationLong") Double destinationLong,
+                     @Param("destinationLat") Double destinationLat,
                      @Param("maxDistanceSq") Double maxDistanceSq);
 
        @Query("SELECT p FROM TravelPackage p WHERE p.status = 'ACTIVE' AND p.packageType = :packageType ORDER BY p.createdAt DESC")
@@ -99,11 +99,11 @@ public interface TravelPackageRepository extends JpaRepository<TravelPackage, Lo
                      @Param("maxDistanceSq") Double maxDistanceSq);
 
        @Query("SELECT p FROM TravelPackage p WHERE p.status = 'ACTIVE' AND " +
-                     "(LOWER(p.origin) LIKE LOWER(CONCAT('%', :origin, '%')) OR " +
-                     "LOWER(p.originName) LIKE LOWER(CONCAT('%', :origin, '%'))) AND " +
-                     "(LOWER(p.destination) LIKE LOWER(CONCAT('%', :destination, '%')) OR " +
-                     "LOWER(p.destinationName) LIKE LOWER(CONCAT('%', :destination, '%'))) " +
+                     "LOWER(p.originName) LIKE LOWER(CONCAT('%', :origin, '%')) AND " +
+                     "LOWER(p.destinationName) LIKE LOWER(CONCAT('%', :destination, '%')) " +
                      "ORDER BY p.createdAt DESC")
        List<TravelPackage> findByOriginAndDestination(@Param("origin") String origin,
                      @Param("destination") String destination);
+
+       Optional<TravelPackage> findByTitle(String title);
 }

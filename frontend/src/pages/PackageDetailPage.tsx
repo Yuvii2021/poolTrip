@@ -10,31 +10,6 @@ import { packageAPI } from '../services/api';
 import { TravelPackage } from '../types';
 import styles from './PackageDetailPage.module.css';
 
-const defaultImages: Record<string, string> = {
-  ADVENTURE: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200',
-  BEACH: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200',
-  CULTURAL: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1200',
-  HONEYMOON: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200',
-  FAMILY: 'https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=1200',
-  PILGRIMAGE: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=1200',
-  WILDLIFE: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=1200',
-  CRUISE: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?w=1200',
-  LUXURY: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200',
-  BUDGET: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200',
-};
-
-const packageTypeIcons: Record<string, string> = {
-  ADVENTURE: '🏔️',
-  BEACH: '🏖️',
-  CULTURAL: '🏛️',
-  HONEYMOON: '💑',
-  FAMILY: '👨‍👩‍👧‍👦',
-  PILGRIMAGE: '🛕',
-  WILDLIFE: '🦁',
-  CRUISE: '🚢',
-  LUXURY: '💎',
-  BUDGET: '💰',
-};
 
 // Helper function to parse inclusions/exclusions (comma-separated string or array)
 const parseList = (data: string | string[] | undefined, fallback: string[]): string[] => {
@@ -84,8 +59,7 @@ const isValidImage = (str: string): boolean => {
 };
 
 // Helper function to parse images (comma-separated string or array)
-const parseImages = (coverImage: string | undefined, images: string | string[] | undefined, packageType: string): string[] => {
-  const defaultImg = defaultImages[packageType] || defaultImages.ADVENTURE;
+const parseImages = (coverImage: string | undefined, images: string | string[] | undefined): string[] => {
   const allImages: string[] = [];
   
   // Add cover image first if valid
@@ -115,11 +89,6 @@ const parseImages = (coverImage: string | undefined, images: string | string[] |
     }
   }
   
-  // If no images, use default
-  if (allImages.length === 0) {
-    allImages.push(defaultImg);
-  }
-  
   return allImages;
 };
 
@@ -133,6 +102,9 @@ export const PackageDetailPage = () => {
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
+    // Scroll to top when component mounts or id changes
+    window.scrollTo(0, 0);
+    
     if (id) {
       loadPackage(parseInt(id));
     }
@@ -150,8 +122,8 @@ export const PackageDetailPage = () => {
   };
 
   // Get all images for the package
-  const allImages = pkg ? parseImages(pkg.coverImage, pkg.images, pkg.packageType) : [];
-  const coverImage = pkg?.coverImage || defaultImages[pkg?.packageType || 'ADVENTURE'] || defaultImages.ADVENTURE;
+  const allImages = pkg ? parseImages(pkg.coverImage, pkg.images) : [];
+  const coverImage = pkg?.coverImage;
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
@@ -210,7 +182,13 @@ export const PackageDetailPage = () => {
     : 0;
 
   return (
-    <div className={styles.page}>
+    <motion.div 
+      className={styles.page}
+      initial={{ opacity: 0, y: -50 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -50 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
       {/* Hero Section with Cover Image */}
       <section className={styles.hero}>
         <div className={styles.heroImage}>
@@ -231,7 +209,7 @@ export const PackageDetailPage = () => {
           <div className={styles.heroInfo}>
             <div className={styles.heroBadges}>
               <span className={styles.typeBadge}>
-                {packageTypeIcons[pkg.packageType]} {pkg.packageType}
+                {pkg.packageTypeIcon || '📦'} {pkg.packageTypeLabel || pkg.packageType}
               </span>
               {pkg.featured && (
                 <span className={styles.featuredBadge}>
@@ -297,7 +275,7 @@ export const PackageDetailPage = () => {
           <div className={styles.tabContent}>
             {activeTab === 'overview' && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={styles.overview}
               >
@@ -393,7 +371,7 @@ export const PackageDetailPage = () => {
 
             {activeTab === 'itinerary' && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={styles.itinerary}
               >
@@ -419,7 +397,7 @@ export const PackageDetailPage = () => {
 
             {activeTab === 'terms' && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={styles.terms}
               >
@@ -586,7 +564,7 @@ export const PackageDetailPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
 
