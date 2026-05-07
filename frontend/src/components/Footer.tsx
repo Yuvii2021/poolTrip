@@ -3,19 +3,33 @@ import { Link } from 'react-router-dom';
 import { 
   Compass, MapPin, Phone, Mail, 
   Facebook, Instagram, Twitter, Youtube,
-  Send
+  Send, CheckCircle2, Loader2
 } from 'lucide-react';
+import { subscribeAPI } from '../services/api';
 import styles from './Footer.module.css';
 
 
 export const Footer = () => {
   const [email, setEmail] = useState('');
+  const [subscribing, setSubscribing] = useState(false);
+  const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle newsletter subscription
-    alert(`Thank you for subscribing with ${email}!`);
-    setEmail('');
+    if (!email.trim() || subscribing) return;
+
+    try {
+      setSubscribing(true);
+      setResult(null);
+      const res = await subscribeAPI.subscribe(email.trim());
+      setResult({ type: 'success', message: res.message });
+      setEmail('');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Something went wrong. Please try again.';
+      setResult({ type: 'error', message: msg });
+    } finally {
+      setSubscribing(false);
+    }
   };
 
   return (
@@ -28,21 +42,38 @@ export const Footer = () => {
               <h3>Your Travel Journey Starts Here</h3>
               <p>Sign up and we'll send the best deals to you</p>
             </div>
-            <form onSubmit={handleSubscribe} className={styles.newsletterForm}>
-              <div className={styles.inputWrapper}>
-                <Mail size={18} className={styles.inputIcon} />
-                <input
-                  type="email"
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+            {result?.type === 'success' ? (
+              <div className={styles.subscribeSuccess}>
+                <CheckCircle2 size={20} />
+                <span>{result.message}</span>
               </div>
-              <button type="submit" className={styles.subscribeBtn}>
-                Subscribe <Send size={16} />
-              </button>
-            </form>
+            ) : (
+              <div>
+                <form onSubmit={handleSubscribe} className={styles.newsletterForm}>
+                  <div className={styles.inputWrapper}>
+                    <Mail size={18} className={styles.inputIcon} />
+                    <input
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setResult(null); }}
+                      required
+                      disabled={subscribing}
+                    />
+                  </div>
+                  <button type="submit" className={styles.subscribeBtn} disabled={subscribing}>
+                    {subscribing ? (
+                      <><Loader2 size={16} className={styles.spinIcon} /> Subscribing...</>
+                    ) : (
+                      <>Subscribe <Send size={16} /></>
+                    )}
+                  </button>
+                </form>
+                {result?.type === 'error' && (
+                  <p className={styles.subscribeError}>{result.message}</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -58,7 +89,7 @@ export const Footer = () => {
                   <Compass size={24} />
                 </div>
                 <span className={styles.logoText}>
-                  <span>Pool</span><span className={styles.accent}>Trip</span>
+                  <span>Pool</span><span className={styles.accent}>MyTrips</span>
                 </span>
               </Link>
               <p className={styles.brandDescription}>
@@ -85,17 +116,17 @@ export const Footer = () => {
             <div className={styles.contactColumn}>
               <h4 className={styles.columnTitle}>Contact Us</h4>
               <div className={styles.contactList}>
-                <a href="mailto:support@pooltrip.in" className={styles.contactItem}>
+                <a href="mailto:pooltrip7@gmail.com" className={styles.contactItem}>
                   <Mail size={18} />
-                  <span>support@pooltrip.in</span>
+                  <span>pooltrip7@gmail.com</span>
                 </a>
-                <a href="tel:+919876543210" className={styles.contactItem}>
+                <a href="tel:+917454985109" className={styles.contactItem}>
                   <Phone size={18} />
-                  <span>+91 98765 43210</span>
+                  <span>+91 74549 85109</span>
                 </a>
                 <div className={styles.contactItem}>
                   <MapPin size={18} />
-                  <span>Mumbai, Maharashtra, India 400001</span>
+                  <span>Panchkula, Haryana, India 134112</span>
                 </div>
               </div>
             </div>
@@ -106,7 +137,7 @@ export const Footer = () => {
       {/* Copyright */}
       <div className={styles.copyright}>
         <div className={styles.container}>
-          <p>© Copyright {new Date().getFullYear()} PoolTrip. All Rights Reserved.</p>
+          <p>© Copyright {new Date().getFullYear()} PoolMyTrips. All Rights Reserved.</p>
         </div>
       </div>
     </footer>

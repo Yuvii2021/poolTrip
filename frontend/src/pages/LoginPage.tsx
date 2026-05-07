@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, Phone, Lock, Eye, EyeOff, ArrowRight, Car, Compass, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getApiErrorMessage } from '../utils/error';
 import styles from './AuthPages.module.css';
 
 export const LoginPage = () => {
@@ -31,6 +32,14 @@ export const LoginPage = () => {
     setPhone(formatted);
   };
 
+  const resolveRedirectPath = (): string => {
+    if (!redirectTo) return '/';
+    if (redirectTo === 'create') return '/dashboard?action=create';
+    // Accept only in-app relative routes for safety.
+    if (redirectTo.startsWith('/')) return redirectTo;
+    return '/';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -41,25 +50,13 @@ export const LoginPage = () => {
       // Clean phone number before sending
       const cleanPhone = phone.replace(/\D/g, '');
       await login(cleanPhone, password);
-      if (redirectTo === 'create') {
-        navigate('/dashboard?action=create');
-      } else {
-        navigate('/');
+      navigate(resolveRedirectPath());
+    } catch (err: unknown) {
+      const errorData = (err as any)?.response?.data;
+      if (errorData?.errors && typeof errorData.errors === 'object') {
+        setFieldErrors(errorData.errors as Record<string, string>);
       }
-    } catch (err: any) {
-      const errorData = err.response?.data;
-      
-      // Extract field-specific errors if available
-      if (errorData?.errors) {
-        setFieldErrors(errorData.errors);
-        // Set main error message from backend or combine field errors
-        const errorMessage = errorData.message || 
-          Object.values(errorData.errors).join(', ');
-        setError(errorMessage);
-      } else {
-        // Fallback to generic error message
-        setError(errorData?.message || 'Invalid credentials. Please try again.');
-      }
+      setError(getApiErrorMessage(err, 'Invalid credentials. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -87,7 +84,7 @@ export const LoginPage = () => {
               <Users size={24} />
             </div>
             <div className={styles.logoTextWrapper}>
-              <span className={styles.logoText}>Pool<span className={styles.logoAccent}>Trip</span></span>
+              <span className={styles.logoText}>Pool<span className={styles.logoAccent}>MyTrips</span></span>
               <span className={styles.logoTagline}>Travel Together</span>
             </div>
           </Link>

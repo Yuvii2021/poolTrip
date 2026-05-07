@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, User, Phone, MapPin, Car, Compass, TrendingUp, Shield } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../services/api';
+import { getApiErrorMessage } from '../utils/error';
 import styles from './AuthPages.module.css';
 
 export const RegisterPage = () => {
@@ -55,17 +56,12 @@ export const RegisterPage = () => {
       setSuccessMessage('OTP has been sent to your phone number');
       // Clear success message after 5 seconds
       setTimeout(() => setSuccessMessage(''), 5000);
-    } catch (err: any) {
-      const errorData = err.response?.data;
-      
-      if (errorData?.errors) {
-        setFieldErrors(errorData.errors);
-        const errorMessage = errorData.message || 
-          Object.values(errorData.errors).join(', ');
-        setError(errorMessage);
-      } else {
-        setError(errorData?.message || 'Failed to send OTP. Please try again.');
+    } catch (err: unknown) {
+      const errorData = (err as any)?.response?.data;
+      if (errorData?.errors && typeof errorData.errors === 'object') {
+        setFieldErrors(errorData.errors as Record<string, string>);
       }
+      setError(getApiErrorMessage(err, 'Failed to send OTP. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -80,8 +76,8 @@ export const RegisterPage = () => {
       await authAPI.sendOtp(cleanPhone);
       setSuccessMessage('OTP has been resent to your phone number');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to resend OTP. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -93,14 +89,11 @@ export const RegisterPage = () => {
     setFieldErrors({});
     setSuccessMessage(''); // Clear success message
     
-    // Validate OTP is entered - check both otp state and ensure it's not empty
+    // Validate OTP is entered
     const currentOtp = otp || '';
     const trimmedOtp = currentOtp.trim();
-    
-    console.log('Current OTP state:', otp, 'Trimmed:', trimmedOtp, 'Length:', trimmedOtp.length);
-    
+
     if (!trimmedOtp || trimmedOtp.length === 0) {
-      console.log('Otp is required - validation failed');
       setFieldErrors({ Otp: 'Otp is required' });
       setError('Please enter the OTP');
       return;
@@ -109,7 +102,6 @@ export const RegisterPage = () => {
     setLoading(true);
 
     try {
-      // For demo: any OTP is accepted, but we still need to send it
       const cleanPhone = formData.phone.replace(/\D/g, '');
       
       // Build register data matching backend RegisterRequest DTO exactly
@@ -139,11 +131,6 @@ export const RegisterPage = () => {
         throw new Error('OTP is missing from registration data');
       }
       
-      // Debug: Log the data being sent
-      console.log('Registering with data:', { ...registerData, password: '***' });
-      console.log('OTP being sent:', registerData.Otp, 'Type:', typeof registerData.Otp, 'Length:', registerData.Otp.length);
-      console.log('Full registerData JSON:', JSON.stringify(registerData, null, 2));
-      
       await register({
         email: registerData.email,
         password: registerData.password,
@@ -155,17 +142,12 @@ export const RegisterPage = () => {
         city: formData.city, // This is for frontend context, not sent to backend
       });
       navigate('/');
-    } catch (err: any) {
-      const errorData = err.response?.data;
-      
-      if (errorData?.errors) {
-        setFieldErrors(errorData.errors);
-        const errorMessage = errorData.message || 
-          Object.values(errorData.errors).join(', ');
-        setError(errorMessage);
-      } else {
-        setError(errorData?.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      const errorData = (err as any)?.response?.data;
+      if (errorData?.errors && typeof errorData.errors === 'object') {
+        setFieldErrors(errorData.errors as Record<string, string>);
       }
+      setError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -193,7 +175,7 @@ export const RegisterPage = () => {
               <Users size={24} />
             </div>
             <div className={styles.logoTextWrapper}>
-              <span className={styles.logoText}>Pool<span className={styles.logoAccent}>Trip</span></span>
+              <span className={styles.logoText}>Pool<span className={styles.logoAccent}>MyTrips</span></span>
               <span className={styles.logoTagline}>Travel Together</span>
             </div>
           </Link>
@@ -487,7 +469,7 @@ export const RegisterPage = () => {
                       Resend OTP
                     </button>
                     <p className={styles.otpHint}>
-                      💡 Demo Mode: Any OTP will be accepted
+                      OTP sent to your number. It is valid for a short time.
                     </p>
                   </div>
 

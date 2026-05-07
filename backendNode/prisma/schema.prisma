@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum PackageStatus {
+  ACTIVE
+  FULL
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  email          String    @unique @db.VarChar(191)
+  password       String    @db.VarChar(255)
+  fullName       String    @map("full_name") @db.VarChar(191)
+  phone          String    @unique @db.VarChar(20)
+  whatsappNumber String?   @map("whatsapp_number") @db.VarChar(20)
+  bio            String?   @db.Text
+  profilePhoto   String?   @map("profile_photo") @db.Text
+  phoneVerified  Boolean   @default(true) @map("phone_verified")
+  emailVerified  Boolean   @default(false) @map("email_verified")
+  rating         Float     @default(0)
+  reviewCount    Int       @default(0) @map("review_count")
+  numberOfTrips  BigInt    @default(0) @map("number_of_trips") @db.UnsignedBigInt
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  packages       TravelPackage[]
+
+  @@map("users")
+}
+
+model TravelPackage {
+  id                   BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  title                String         @db.VarChar(191)
+  userId               BigInt         @map("user_id") @db.UnsignedBigInt
+  description          String?        @db.Text
+  originName           String         @map("origin_name") @db.VarChar(191)
+  originLatitude       Float          @map("origin_latitude")
+  originLongitude      Float          @map("origin_longitude")
+  destinationName      String         @map("destination_name") @db.VarChar(191)
+  destinationLatitude  Float          @map("destination_latitude")
+  destinationLongitude Float          @map("destination_longitude")
+  price                Int
+  discountedPrice      Int?           @map("discounted_price")
+  durationDays         Int            @map("duration_days")
+  durationNights       Int            @map("duration_nights")
+  totalSeats           Int            @map("total_seats")
+  availableSeats       Int            @map("available_seats")
+  startDate            DateTime?      @db.Date @map("start_date")
+  inclusions           String?        @db.Text
+  exclusions           String?        @db.Text
+  transportation       String?        @db.VarChar(64)
+  termsAndConditions   String?        @map("terms_and_conditions") @db.Text
+  cancellationPolicy   String?        @map("cancellation_policy") @db.Text
+  status               PackageStatus  @default(ACTIVE)
+  packageType          String         @map("package_type") @db.VarChar(64)
+  featured             Boolean        @default(false)
+  instantBooking       Boolean        @default(true) @map("instant_booking")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  user                 User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media                PackageMedia[]
+  itinerary            PackageItinerary[]
+  bookings             Booking[]
+
+  @@index([userId], map: "travel_packages_user_id_idx")
+  @@map("travel_packages")
+}
+
+model PackageMedia {
+  id        BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  packageId BigInt        @map("package_id") @db.UnsignedBigInt
+  mediaUrl  String        @map("media_url") @db.Text
+  pkg       TravelPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId], map: "package_media_package_id_idx")
+  @@map("package_media")
+}
+
+model PackageItinerary {
+  id            BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  packageId     BigInt        @map("package_id") @db.UnsignedBigInt
+  itineraryItem String        @map("itinerary_item") @db.Text
+  pkg           TravelPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId], map: "package_itinerary_package_id_idx")
+  @@map("package_itinerary")
+}
+
+model Booking {
+  id         BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  passengerId BigInt       @map("passenger_id") @db.UnsignedBigInt
+  packageId  BigInt        @map("package_id") @db.UnsignedBigInt
+  seatsBooked Int          @map("seats_booked")
+  message    String?       @db.Text
+  rating     Int?
+  review     String?       @db.Text
+  ratedAt    DateTime?     @map("rated_at")
+  status     BookingStatus
+  createdAt  DateTime      @default(now()) @map("created_at")
+  updatedAt  DateTime      @updatedAt @map("updated_at")
+  respondedAt DateTime?    @map("responded_at")
+  pkg        TravelPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([passengerId], map: "bookings_passenger_id_idx")
+  @@index([packageId], map: "bookings_package_id_idx")
+  @@map("bookings")
+}
+
+model Subscriber {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  email        String   @unique @db.VarChar(191)
+  subscribedAt DateTime @default(now()) @map("subscribed_at")
+
+  @@map("subscribers")
+}
+
+model OtpVerification {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  phone     String   @db.VarChar(20)
+  otp       String   @db.VarChar(20)
+  expiresAt DateTime @map("expires_at")
+  verified  Boolean  @default(false)
+
+  @@index([phone], map: "otp_verification_phone_idx")
+  @@map("otp_verification")
+}

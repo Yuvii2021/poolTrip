@@ -7,6 +7,7 @@ import {
 import styles from './ContactPage.module.css';
 
 export const ContactPage = () => {
+  const supportWhatsApp = '917454985109';
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -19,8 +20,22 @@ export const ContactPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    alert('Thank you for your inquiry! We will contact you soon.');
+
+    const enquiryLines = [
+      `Name: ${formData.name}`,
+      `Phone: ${formData.phone}`,
+      formData.email ? `Email: ${formData.email}` : '',
+      formData.destination ? `Destination: ${formData.destination}` : '',
+      formData.date ? `Departure: ${formData.date}` : '',
+      formData.people ? `People: ${formData.people}` : '',
+      formData.message ? `Message: ${formData.message}` : '',
+    ].filter(Boolean);
+
+    const message = `Hi PoolMyTrips team, I want to plan a trip.\n\n${enquiryLines.join('\n')}`;
+    const whatsappUrl = `https://wa.me/${supportWhatsApp}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+
+    alert('Thanks! We opened WhatsApp with your enquiry details.');
     setFormData({
       name: '',
       phone: '',
@@ -79,28 +94,28 @@ export const ContactPage = () => {
               </p>
 
               <div className={styles.contactCards}>
-                <a href="tel:+919876543210" className={styles.contactCard}>
+                <a href="tel:+917454985109" className={styles.contactCard}>
                   <div className={styles.contactIcon}>
                     <Phone size={24} />
                   </div>
                   <div>
                     <h3>Call Us</h3>
-                    <span>+91 98765 43210</span>
+                    <span>+91 74549 85109</span>
                   </div>
                 </a>
 
-                <a href="mailto:support@pooltrip.in" className={styles.contactCard}>
+                <a href="mailto:pooltrip7@gmail.com" className={styles.contactCard}>
                   <div className={styles.contactIcon}>
                     <Mail size={24} />
                   </div>
                   <div>
                     <h3>Email Us</h3>
-                    <span>support@pooltrip.in</span>
+                    <span>pooltrip7@gmail.com</span>
                   </div>
                 </a>
 
                 <a 
-                  href="https://wa.me/919876543210" 
+                  href="https://wa.me/917454985109" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className={styles.contactCard}
@@ -128,10 +143,9 @@ export const ContactPage = () => {
               <div className={styles.officeInfo}>
                 <h3><MapPin size={18} /> Our Office</h3>
                 <p>
-                  PoolTrip Adventures<br />
-                  123 Travel Street, Andheri West<br />
-                  Mumbai, Maharashtra 400053<br />
-                  India
+                  PoolMyTrips Adventures<br />
+                  Panchkula, Haryana<br />
+                  India 134112
                 </p>
               </div>
             </motion.div>

@@ -24,9 +24,26 @@ export const FilterSidebar = ({
   const [loading, setLoading] = useState(true);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
   const [durationRange, setDurationRange] = useState<[number, number]>([1, 30]);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     loadFilterOptions();
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const add = (mq as any).addEventListener ? 'addEventListener' : 'addListener';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const remove = (mq as any).removeEventListener ? 'removeEventListener' : 'removeListener';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (mq as any)[add]('change', update);
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (mq as any)[remove]('change', update);
+    };
   }, []);
 
   useEffect(() => {
@@ -125,19 +142,19 @@ export const FilterSidebar = ({
     }
     // Clear all filters by setting an empty object
     onFiltersChange({});
-    // Trigger search to refresh results
-    onApplyFilters();
+    // Trigger search with explicit cleared filters to avoid stale state reads.
+    onApplyFilters({});
   };
 
   const hasActiveFilters = () => {
     return !!(
-      (filters.minPrice !== filterOptions?.priceRange?.min) ||
-      (filters.maxPrice !== filterOptions?.priceRange?.max) ||
-      filters.days ||
+      (filters.minPrice !== undefined) ||
+      (filters.maxPrice !== undefined) ||
+      (filters.days !== undefined) ||
       filters.minDays !== undefined ||
       filters.maxDays !== undefined ||
-      filters.transportation ||
-      filters.featured
+      (filters.transportation !== undefined) ||
+      (filters.featured !== undefined)
     );
   };
 
@@ -154,9 +171,9 @@ export const FilterSidebar = ({
           >
             <motion.div
               className={styles.sidebar}
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              initial={isMobile ? { y: '100%' } : { x: '100%' }}
+              animate={isMobile ? { y: 0 } : { x: 0 }}
+              exit={isMobile ? { y: '100%' } : { x: '100%' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className={styles.loading}>Loading filters...</div>
@@ -170,27 +187,41 @@ export const FilterSidebar = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          <motion.div
-            className={styles.overlay}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onClose) {
-                onClose();
-              }
-            }}
-          />
+        <motion.div
+          className={styles.overlay}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose?.();
+          }}
+        >
           <motion.div
             className={styles.sidebar}
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            initial={
+              isMobile
+                ? { y: '100%' }
+                : { scale: 0.96, opacity: 0 }
+            }
+            animate={
+              isMobile
+                ? { y: 0 }
+                : { scale: 1, opacity: 1 }
+            }
+            exit={
+              isMobile
+                ? { y: '100%' }
+                : { scale: 0.98, opacity: 0 }
+            }
+            transition={
+              isMobile
+                ? { type: 'spring', damping: 25, stiffness: 220 }
+                : { duration: 0.18, ease: 'easeOut' }
+            }
             onClick={(e) => e.stopPropagation()}
           >
+            <div className={styles.sheetHandle} aria-hidden="true" />
             {/* Header */}
             <div className={styles.header}>
               <div className={styles.headerTitle}>
@@ -506,7 +537,7 @@ export const FilterSidebar = ({
               </button>
             </div>
           </motion.div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

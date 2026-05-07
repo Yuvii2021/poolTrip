@@ -1,0 +1,169 @@
+/* ========================================
+   Image Placeholder — Beautiful Fallback
+   ======================================== */
+
+.placeholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---- Sizes ---- */
+.card {
+  min-height: 200px;
+}
+
+.hero {
+  min-height: 400px;
+}
+
+/* ---- Dot Grid Pattern Overlay ---- */
+.patternOverlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.8) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+.hero .patternOverlay {
+  background-size: 28px 28px;
+}
+
+/* ---- Decorative Orbs ---- */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.12;
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+/* ---- Main Content ---- */
+.content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.hero .content {
+  gap: 1rem;
+}
+
+/* ---- Initial Circle ---- */
+.initialCircle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.hero .initialCircle {
+  width: 96px;
+  height: 96px;
+  border-width: 3px;
+}
+
+.initial {
+  font-family: var(--font-display, 'Playfair Display', serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.hero .initial {
+  font-size: 2.75rem;
+}
+
+/* ---- Destination Name ---- */
+.destinationName {
+  font-family: var(--font-body, 'DM Sans', sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  max-width: 80%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero .destinationName {
+  font-size: 1.125rem;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Package Type Tag ---- */
+.typeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+}
+
+.hero .typeTag {
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.875rem;
+}
+
+/* ---- Watermark Icon ---- */
+.watermark {
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  color: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  transform: rotate(-12deg);
+  z-index: 1;
+}
+
+.hero .watermark {
+  bottom: -12px;
+  right: -12px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .hero {
+    min-height: 280px;
+  }
+  
+  .hero .initialCircle {
+    width: 72px;
+    height: 72px;
+  }
+  
+  .hero .initial {
+    font-size: 2rem;
+  }
+  
+  .hero .destinationName {
+    font-size: 0.9375rem;
+  }
+}

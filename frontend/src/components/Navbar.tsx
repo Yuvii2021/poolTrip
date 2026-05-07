@@ -5,19 +5,19 @@ import { packageAPI } from '../services/api';
 import { PackageTypeOption } from '../types';
 import { 
   Menu, X, ChevronDown, User, LogOut, 
-  Compass, PlusCircle
+  Compass, PlusCircle, CheckCircle2, Calendar
 } from 'lucide-react';
 import styles from './Navbar.module.css';
 
 const destinations = [
-  { name: 'Kashmir', slug: 'kashmir', emoji: '🏔️' },
-  { name: 'Goa', slug: 'goa', emoji: '🏖️' },
-  { name: 'Kerala', slug: 'kerala', emoji: '🌴' },
-  { name: 'Rajasthan', slug: 'rajasthan', emoji: '🏰' },
-  { name: 'Ladakh', slug: 'ladakh', emoji: '🗻' },
-  { name: 'Andaman', slug: 'andaman', emoji: '🐚' },
-  { name: 'Sikkim', slug: 'sikkim', emoji: '🌸' },
-  { name: 'Himachal', slug: 'himachal', emoji: '❄️' },
+  { name: 'Kashmir', slug: 'kashmir', emoji: '🪷' },
+  { name: 'Goa', slug: 'goa', emoji: '🌊' },
+  { name: 'Kerala', slug: 'kerala', emoji: '🛶' },
+  { name: 'Rajasthan', slug: 'rajasthan', emoji: '🕌' },
+  { name: 'Ladakh', slug: 'ladakh', emoji: '⛰️' },
+  { name: 'Andaman', slug: 'andaman', emoji: '🏝️' },
+  { name: 'Sikkim', slug: 'sikkim', emoji: '🍃' },
+  { name: 'Himachal', slug: 'himachal', emoji: '🏔️' },
 ];
 
 export const Navbar = () => {
@@ -29,6 +29,8 @@ export const Navbar = () => {
   const [packageTypes, setPackageTypes] = useState<PackageTypeOption[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,9 +43,22 @@ export const Navbar = () => {
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      const isOutsideNavLinks = dropdownRef.current && !dropdownRef.current.contains(target);
-      const isOutsideUserDropdown = userDropdownRef.current && !userDropdownRef.current.contains(target);
-      
+
+      // When mobile menu is open, don't let "outside" logic fight mobile dropdown toggles.
+      // Instead, only close the mobile menu if the click is truly outside it.
+      if (isMobileMenuOpen) {
+        const clickedInsideMobileMenu = mobileMenuRef.current?.contains(target) ?? false;
+        const clickedMobileMenuBtn = mobileMenuBtnRef.current?.contains(target) ?? false;
+        if (!clickedInsideMobileMenu && !clickedMobileMenuBtn) {
+          setIsMobileMenuOpen(false);
+          setActiveDropdown(null);
+        }
+        return;
+      }
+
+      const isOutsideNavLinks = dropdownRef.current ? !dropdownRef.current.contains(target) : true;
+      const isOutsideUserDropdown = userDropdownRef.current ? !userDropdownRef.current.contains(target) : true;
+
       // Only close if clicking outside both dropdown areas
       if (isOutsideNavLinks && isOutsideUserDropdown) {
         setActiveDropdown(null);
@@ -51,7 +66,7 @@ export const Navbar = () => {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isMobileMenuOpen]);
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
@@ -74,6 +89,18 @@ export const Navbar = () => {
   const isHomePage = location.pathname === '/';
   const navbarClass = `${styles.navbar} ${isScrolled || !isHomePage ? styles.scrolled : ''}`;
 
+  const verificationPercent = (() => {
+    if (!user) return 0;
+    const steps = 4;
+    let done = 0;
+    if (user.phoneVerified !== false) done++; // phone is verified at registration
+    if (user.emailVerified) done++;
+    if (user.profilePhoto && user.profilePhoto.trim().length > 0) done++;
+    if (user.bio && user.bio.trim().length > 0) done++;
+    return Math.round((done * 100) / steps);
+  })();
+  const isFullyVerified = verificationPercent >= 100;
+
   return (
     <nav className={navbarClass}>
       <div className={styles.container}>
@@ -84,7 +111,7 @@ export const Navbar = () => {
           </div>
           <span className={styles.logoText}>
             <span className={styles.logoMain}>Pool</span>
-            <span className={styles.logoAccent}>Trip</span>
+            <span className={styles.logoAccent}>MyTrips</span>
           </span>
         </Link>
 
@@ -173,38 +200,99 @@ export const Navbar = () => {
                 className={styles.userBtn}
                 onClick={() => setActiveDropdown(activeDropdown === 'user' ? null : 'user')}
               >
-                <User size={18} />
+                <span className={styles.userAvatarBtn}>
+                  {user.profilePhoto ? (
+                    <img src={user.profilePhoto} alt="" className={styles.userAvatarImg} />
+                  ) : (
+                    <span className={styles.userAvatarInitial}>
+                      {user.fullName.trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  {isFullyVerified && (
+                    <span className={styles.verifiedDot}>
+                      <CheckCircle2 size={12} />
+                    </span>
+                  )}
+                </span>
                 <span>{user.fullName.split(' ')[0]}</span>
                 <ChevronDown size={14} />
               </button>
+
               {activeDropdown === 'user' && (
                 <div className={`${styles.dropdownMenu} ${styles.userMenu}`}>
-                  <Link 
-                    to="/profile" 
-                    className={styles.dropdownItem}
-                    onClick={() => setActiveDropdown(null)}
-                  >
-                    <User size={16} />
-                    <span>Profile</span>
-                  </Link>
-                  <Link 
-                    to="/dashboard" 
-                    className={styles.dropdownItem}
-                    onClick={() => setActiveDropdown(null)}
-                  >
-                    <Compass size={16} />
-                    <span>Dashboard</span>
-                  </Link>
-                  <button 
-                    onClick={() => {
-                      setActiveDropdown(null);
-                      logout();
-                    }} 
-                    className={styles.dropdownItem}
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
+                  {/* User header */}
+                  <div className={styles.userMenuHeader}>
+                    <div className={styles.userMenuAvatar}>
+                      {user.profilePhoto ? (
+                        <img src={user.profilePhoto} alt="" className={styles.userMenuAvatarImg} />
+                      ) : (
+                        <span className={styles.userMenuAvatarInitial}>
+                          {user.fullName.trim().charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className={styles.userMenuInfo}>
+                      <div className={styles.userMenuName}>{user.fullName}</div>
+                      <div className={styles.userMenuEmail}>{user.email}</div>
+                    </div>
+                  </div>
+
+                  {/* Verification progress — compact bar */}
+                  {!isFullyVerified && (
+                    <Link
+                      to="/profile"
+                      className={styles.verifyBar}
+                      onClick={() => setActiveDropdown(null)}
+                    >
+                      <div className={styles.verifyBarTop}>
+                        <span className={styles.verifyBarLabel}>Profile {verificationPercent}% complete</span>
+                        <span className={styles.verifyBarAction}>Complete &rarr;</span>
+                      </div>
+                      <div className={styles.verifyBarTrack}>
+                        <div className={styles.verifyBarFill} style={{ width: `${verificationPercent}%` }} />
+                      </div>
+                    </Link>
+                  )}
+
+                  <div className={styles.userMenuLinks}>
+                    <Link 
+                      to="/profile" 
+                      className={styles.dropdownItem}
+                      onClick={() => setActiveDropdown(null)}
+                    >
+                      <User size={16} />
+                      <span>Profile</span>
+                    </Link>
+                    <Link 
+                      to="/dashboard" 
+                      className={styles.dropdownItem}
+                      onClick={() => setActiveDropdown(null)}
+                    >
+                      <Compass size={16} />
+                      <span>Dashboard</span>
+                    </Link>
+                    <Link 
+                      to="/my-bookings" 
+                      className={styles.dropdownItem}
+                      onClick={() => setActiveDropdown(null)}
+                    >
+                      <Calendar size={16} />
+                      <span>My Bookings</span>
+                    </Link>
+                  </div>
+
+                  <div className={styles.userMenuFooter}>
+                    <button 
+                      onClick={() => {
+                        setActiveDropdown(null);
+                        logout();
+                      }} 
+                      className={`${styles.dropdownItem} ${styles.logoutItem}`}
+                    >
+                      <LogOut size={16} />
+                      <span>Log out</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -215,10 +303,31 @@ export const Navbar = () => {
           )}
         </div>
 
+        {/* Mobile Quick Actions (visible on mobile) */}
+        <div className={styles.mobileQuickActions}>
+          <Link
+            to={user ? "/dashboard?action=create" : "/login?redirect=create"}
+            className={styles.mobileIconBtn}
+            aria-label="Publish a trip"
+          >
+            <PlusCircle size={20} />
+          </Link>
+          {user ? (
+            <Link to="/dashboard" className={styles.mobileIconBtn} aria-label="Dashboard">
+              <User size={20} />
+            </Link>
+          ) : (
+            <Link to="/login" className={styles.mobileIconBtn} aria-label="Login">
+              <User size={20} />
+            </Link>
+          )}
+        </div>
+
         {/* Mobile Menu Toggle */}
         <button 
           className={styles.mobileMenuBtn}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          ref={mobileMenuBtnRef}
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -226,12 +335,20 @@ export const Navbar = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className={styles.mobileMenu}>
-          <Link to="/" className={styles.mobileNavLink}>Home</Link>
+        <div className={styles.mobileMenu} ref={mobileMenuRef}>
+          {user && (
+            <div className={styles.mobileUserCard}>
+              <div className={styles.mobileUserName}>{user.fullName}</div>
+              <div className={styles.mobileUserMeta}>{user.phone}</div>
+            </div>
+          )}
+
+          <Link to="/" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
           
           <div className={styles.mobileDropdown}>
             <button 
               className={styles.mobileNavLink}
+              type="button"
               onClick={() => setActiveDropdown(activeDropdown === 'mobile-dest' ? null : 'mobile-dest')}
             >
               Destinations <ChevronDown size={16} className={activeDropdown === 'mobile-dest' ? styles.rotated : ''} />
@@ -239,7 +356,12 @@ export const Navbar = () => {
             {activeDropdown === 'mobile-dest' && (
               <div className={styles.mobileSubmenu}>
                 {destinations.map((dest) => (
-                  <Link key={dest.slug} to={`/destinations/${dest.slug}`} className={styles.mobileSubLink}>
+                  <Link
+                    key={dest.slug}
+                    to={`/destinations/${dest.slug}`}
+                    className={styles.mobileSubLink}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     {dest.emoji} {dest.name}
                   </Link>
                 ))}
@@ -250,6 +372,7 @@ export const Navbar = () => {
           <div className={styles.mobileDropdown}>
             <button 
               className={styles.mobileNavLink}
+              type="button"
               onClick={() => setActiveDropdown(activeDropdown === 'mobile-cat' ? null : 'mobile-cat')}
             >
               Categories <ChevronDown size={16} className={activeDropdown === 'mobile-cat' ? styles.rotated : ''} />
@@ -257,7 +380,12 @@ export const Navbar = () => {
             {activeDropdown === 'mobile-cat' && (
               <div className={styles.mobileSubmenu}>
                 {packageTypes.map((cat) => (
-                  <Link key={cat.value} to={`/categories/${cat.value}`} className={styles.mobileSubLink}>
+                  <Link
+                    key={cat.value}
+                    to={`/categories/${cat.value}`}
+                    className={styles.mobileSubLink}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
                     {cat.icon} {cat.label}
                   </Link>
                 ))}
@@ -268,6 +396,7 @@ export const Navbar = () => {
           <Link 
             to={user ? "/dashboard?action=create" : "/login?redirect=create"} 
             className={styles.mobilePublishBtn}
+            onClick={() => setIsMobileMenuOpen(false)}
           >
             <PlusCircle size={18} />
             Publish a Trip
@@ -276,12 +405,23 @@ export const Navbar = () => {
           <div className={styles.mobileActions}>
             {user ? (
               <>
-                <Link to="/profile" className={styles.mobileNavLink}>Profile</Link>
-                <Link to="/dashboard" className={styles.mobileNavLink}>Dashboard</Link>
-                <button onClick={logout} className={styles.mobileNavLink}>Logout</button>
+                <Link to="/profile" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>Profile</Link>
+                <Link to="/my-bookings" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>My Bookings</Link>
+                <Link to="/dashboard" className={styles.mobileNavLink} onClick={() => setIsMobileMenuOpen(false)}>Dashboard</Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    setIsMobileMenuOpen(false);
+                    setActiveDropdown(null);
+                  }}
+                  className={styles.mobileNavLink}
+                >
+                  Logout
+                </button>
               </>
             ) : (
-              <Link to="/login" className={styles.mobileLoginBtn}>Login</Link>
+              <Link to="/login" className={styles.mobileLoginBtn} onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
             )}
           </div>
         </div>

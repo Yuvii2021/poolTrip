@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: linear-gradient(135deg, #1a3d2d 0%, #2d5a45 50%, #1a3d2d 100%);
+  background: linear-gradient(135deg, #0C3C38 0%, #134E4A 50%, #0C3C38 100%);
 }
 
 /* Background */
@@ -21,7 +21,7 @@
   height: 600px;
   top: -200px;
   right: -100px;
-  background: radial-gradient(circle, rgba(196, 92, 38, 0.25) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.25) 0%, transparent 70%);
   filter: blur(60px);
 }
 
@@ -66,7 +66,7 @@
   padding: 2.5rem;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, rgba(45, 90, 69, 0.08) 0%, rgba(196, 92, 38, 0.05) 100%);
+  background: linear-gradient(135deg, rgba(19, 78, 74, 0.08) 0%, rgba(13, 148, 136, 0.05) 100%);
   border-right: 1px solid var(--color-border-light);
 }
 
@@ -83,10 +83,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2d5a45 0%, #1a6b4a 100%);
+  background: linear-gradient(135deg, #134E4A 0%, #14B8A6 100%);
   border-radius: var(--radius-xl);
   color: white;
-  box-shadow: 0 4px 15px rgba(45, 90, 69, 0.35);
+  box-shadow: 0 4px 15px rgba(19, 78, 74, 0.35);
 }
 
 .logoTextWrapper {
@@ -103,7 +103,7 @@
 }
 
 .logoAccent {
-  color: #c45c26;
+  color: #0D9488;
 }
 
 .logoTagline {
@@ -132,7 +132,7 @@
 }
 
 .brandingTitleGradient {
-  color: #c45c26;
+  color: #0D9488;
 }
 
 .brandingSubtitle {
@@ -161,7 +161,7 @@
 
 .feature:hover {
   transform: translateX(4px);
-  border-color: #c45c26;
+  border-color: #0D9488;
 }
 
 .featureIcon {
@@ -170,7 +170,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #2d5a45 0%, #1a6b4a 100%);
+  background: linear-gradient(135deg, #134E4A 0%, #14B8A6 100%);
   border-radius: var(--radius-lg);
   color: white;
   flex-shrink: 0;
@@ -224,13 +224,13 @@
 }
 
 .link {
-  color: #c45c26;
+  color: #0D9488;
   font-weight: 600;
   transition: color var(--transition-fast);
 }
 
 .link:hover {
-  color: #a84b1e;
+  color: #0F766E;
 }
 
 /* Role Selector */
@@ -258,19 +258,19 @@
 }
 
 .roleBtn:hover {
-  border-color: #2d5a45;
+  border-color: #134E4A;
   color: var(--color-text-primary);
 }
 
 .roleActive {
-  background: linear-gradient(135deg, #2d5a45 0%, #1a6b4a 100%);
+  background: linear-gradient(135deg, #134E4A 0%, #14B8A6 100%);
   border-color: transparent;
   color: white;
-  box-shadow: 0 4px 15px rgba(45, 90, 69, 0.3);
+  box-shadow: 0 4px 15px rgba(19, 78, 74, 0.3);
 }
 
 .roleActive:hover {
-  background: linear-gradient(135deg, #2d5a45 0%, #1a6b4a 100%);
+  background: linear-gradient(135deg, #134E4A 0%, #14B8A6 100%);
   border-color: transparent;
   color: white;
 }
@@ -335,8 +335,8 @@
 }
 
 .input:focus {
-  border-color: #2d5a45;
-  box-shadow: 0 0 0 3px rgba(45, 90, 69, 0.1);
+  border-color: #134E4A;
+  box-shadow: 0 0 0 3px rgba(19, 78, 74, 0.1);
   background: var(--color-bg-primary);
 }
 
@@ -370,14 +370,14 @@
 
 .forgotPasswordLink .link {
   font-size: 0.8125rem;
-  color: #c45c26;
+  color: #0D9488;
   font-weight: 500;
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 .forgotPasswordLink .link:hover {
-  color: #a84b1e;
+  color: #0F766E;
   text-decoration: underline;
 }
 
@@ -394,7 +394,7 @@
 .resendOtpBtn {
   margin-top: 0.5rem;
   font-size: 0.75rem;
-  color: #c45c26;
+  color: #0D9488;
   background: none;
   border: none;
   cursor: pointer;
@@ -405,7 +405,7 @@
 }
 
 .resendOtpBtn:hover {
-  color: #a84b1e;
+  color: #0F766E;
   text-decoration: underline;
 }
 
@@ -514,12 +514,12 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.875rem;
-  background: linear-gradient(135deg, #c45c26 0%, #a84b1e 100%);
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
   border-radius: var(--radius-lg);
   color: white;
   font-weight: 600;
   font-size: 0.9375rem;
-  box-shadow: 0 4px 15px rgba(196, 92, 38, 0.3);
+  box-shadow: 0 4px 15px rgba(13, 148, 136, 0.3);
   transition: all var(--transition-base);
   margin-top: 0.5rem;
   cursor: pointer;
@@ -532,7 +532,7 @@
 }
 
 .submitBtn:hover {
-  box-shadow: 0 6px 20px rgba(196, 92, 38, 0.4);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
   transform: translateY(-2px);
 }
 
@@ -563,7 +563,7 @@
 }
 
 .terms a {
-  color: #c45c26;
+  color: #0D9488;
   font-weight: 500;
 }
 
@@ -586,7 +586,7 @@
 }
 
 .demoHeader svg {
-  color: #c45c26;
+  color: #0D9488;
 }
 
 .demoButtons {
@@ -608,8 +608,8 @@
 }
 
 .demoBtn:hover {
-  border-color: #2d5a45;
-  background: rgba(45, 90, 69, 0.08);
+  border-color: #134E4A;
+  background: rgba(19, 78, 74, 0.08);
   transform: translateY(-2px);
 }
 

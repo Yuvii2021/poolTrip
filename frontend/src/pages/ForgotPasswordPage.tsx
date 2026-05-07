@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Phone, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, Shield, CheckCircle } from 'lucide-react';
 import { authAPI } from '../services/api';
+import { getApiErrorMessage } from '../utils/error';
 import styles from './AuthPages.module.css';
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
   
-  const [step, setStep] = useState<'phone' | 'otp' | 'reset' | 'success'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp' | 'success'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -41,21 +42,21 @@ export const ForgotPasswordPage = () => {
       await authAPI.forgotPassword(cleanPhone);
       setStep('otp');
       setSuccessMessage('OTP has been sent to your phone number');
-    } catch (err: any) {
-      const errorData = err.response?.data;
-      
-      if (errorData?.errors) {
-        setFieldErrors(errorData.errors);
-        const errorMessage = errorData.message || 
-          Object.values(errorData.errors).join(', ');
-        setError(errorMessage);
-      } else {
-        setError(errorData?.message || 'Failed to send OTP. Please try again.');
+    } catch (err: unknown) {
+      const errorData = (err as any)?.response?.data;
+      if (errorData?.errors && typeof errorData.errors === 'object') {
+        setFieldErrors(errorData.errors as Record<string, string>);
       }
+      setError(getApiErrorMessage(err, 'Failed to send OTP. Please try again.'));
     } finally {
       setLoading(false);
     }
   };
+    if (otp.trim().length < 4) {
+      setError('Please enter a valid OTP.');
+      return;
+    }
+
 
   const handleVerifyOtpAndReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,17 +80,12 @@ export const ForgotPasswordPage = () => {
       const cleanPhone = phone.replace(/\D/g, '');
       await authAPI.resetPassword(cleanPhone, otp, newPassword);
       setStep('success');
-    } catch (err: any) {
-      const errorData = err.response?.data;
-      
-      if (errorData?.errors) {
-        setFieldErrors(errorData.errors);
-        const errorMessage = errorData.message || 
-          Object.values(errorData.errors).join(', ');
-        setError(errorMessage);
-      } else {
-        setError(errorData?.message || 'Failed to reset password. Please try again.');
+    } catch (err: unknown) {
+      const errorData = (err as any)?.response?.data;
+      if (errorData?.errors && typeof errorData.errors === 'object') {
+        setFieldErrors(errorData.errors as Record<string, string>);
       }
+      setError(getApiErrorMessage(err, 'Failed to reset password. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -104,8 +100,8 @@ export const ForgotPasswordPage = () => {
       await authAPI.forgotPassword(cleanPhone);
       setSuccessMessage('OTP has been resent to your phone number');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to resend OTP. Please try again.');
+    } catch (err: unknown) {
+      setError(getApiErrorMessage(err, 'Failed to resend OTP. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -133,7 +129,7 @@ export const ForgotPasswordPage = () => {
               <Users size={24} />
             </div>
             <div className={styles.logoTextWrapper}>
-              <span className={styles.logoText}>Pool<span className={styles.logoAccent}>Trip</span></span>
+              <span className={styles.logoText}>Pool<span className={styles.logoAccent}>MyTrips</span></span>
               <span className={styles.logoTagline}>Travel Together</span>
             </div>
           </Link>

@@ -55,6 +55,34 @@
   color: white;
   flex-shrink: 0;
   box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.avatarOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: var(--radius-full);
+}
+
+.avatar:hover .avatarOverlay {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.avatarOverlayIconSpin {
+  animation: spin 1s linear infinite;
 }
 
 .profileInfo {
@@ -220,12 +248,12 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-normal);
-  box-shadow: 0 4px 12px rgba(196, 92, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
 }
 
 .actionBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(196, 92, 38, 0.4);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
 }
 
 .actionBtn:active {
@@ -273,12 +301,139 @@
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-normal);
-  box-shadow: 0 4px 12px rgba(196, 92, 38, 0.3);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
 }
 
 .retryBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(196, 92, 38, 0.4);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.4);
+}
+
+/* ========== EDIT MODE ========== */
+.editToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: rgba(13, 148, 136, 0.08);
+  border: 1px solid rgba(13, 148, 136, 0.18);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.editToggleBtn:hover {
+  background: rgba(13, 148, 136, 0.14);
+}
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: white;
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.25);
+}
+
+.saveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.35);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cancelBtn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.editInput {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background: white;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.editInput:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.editInput::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+  font-weight: 400;
+}
+
+/* ========== BADGES ========== */
+.verifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(19, 78, 74, 0.10);
+  color: var(--color-secondary);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.verifyNowBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(13, 148, 136, 0.10);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.verifyNowBtn:hover {
+  background: rgba(13, 148, 136, 0.18);
 }
 
 /* Responsive */

@@ -77,7 +77,7 @@ public class TravelPackage {
     private Integer durationDays;
 
     @NotNull(message = "Duration (days) is required")
-    @Min(value = 1, message = "Duration must be at least 1 day")
+    @Min(value = 0, message = "Duration nights cannot be negative")
     @Column(nullable = false)
     private Integer durationNights;
 
@@ -122,11 +122,11 @@ public class TravelPackage {
     private String cancellationPolicy;
 
 
-    // ===== MEDIA (URLs only) ===== this need to be verified
+    // ===== MEDIA (URLs only — stores both image and video URLs) =====
     @ElementCollection
-    @CollectionTable(name = "package_images", joinColumns = @JoinColumn(name = "package_id"))
-    @Column(name = "image_url")
-    private List<String> imageUrls;
+    @CollectionTable(name = "package_media", joinColumns = @JoinColumn(name = "package_id"))
+    @Column(name = "media_url")
+    private List<String> mediaUrls;
 
 
     // ===== META =====
@@ -138,6 +138,11 @@ public class TravelPackage {
     private PackageType packageType;
 
     private Boolean featured;
+
+    // ===== BOOKING MODE =====
+    // true = instant booking (auto-confirmed), false = approval required (host approves)
+    @Column(nullable = false)
+    private Boolean instantBooking;
 
     // ===== AUDIT =====
     @Column(updatable = false)
@@ -151,6 +156,7 @@ public class TravelPackage {
         updatedAt = LocalDateTime.now();
         if (status == null) status = PackageStatus.ACTIVE;
         if (featured == null) featured = Boolean.FALSE;
+        if (instantBooking == null) instantBooking = Boolean.TRUE;
         if (availableSeats == null) availableSeats = totalSeats;
     }
 
@@ -166,14 +172,14 @@ public class TravelPackage {
     }
 
     public enum PackageType {
-        HILLS("Mountains", "🏔️"),
-        BEACH("Beach", "🏖️"),
-        CITY("City Tour", "🏙️"),
-        PILGRIMAGE("Yatra", "🛕"),
-        ADVENTURE("Adventure", "🧗"),
-        WILDLIFE("Nature & Wildlife", "🌲"),
-        ROAD_TRIP("Road Trip", "🚗"),
-        HONEYMOON("Honeymoon", "💑");
+        HILLS("Mountains", "🗻"),
+        BEACH("Beach", "🌊"),
+        CITY("City Tour", "🌆"),
+        PILGRIMAGE("Yatra", "🙏"),
+        ADVENTURE("Adventure", "🏕️"),
+        WILDLIFE("Nature & Wildlife", "🌿"),
+        ROAD_TRIP("Road Trip", "🛣️"),
+        HONEYMOON("Honeymoon", "💕");
 
         private final String label;
         private final String icon;

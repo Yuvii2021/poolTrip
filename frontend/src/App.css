@@ -1,38 +1,38 @@
-/* ========== CSS VARIABLES - EARTHY ADVENTURE THEME ========== */
+/* ========== CSS VARIABLES - OCEAN BREEZE & GOLDEN HOUR ========== */
 :root {
-  /* Primary Colors - Warm Terracotta & Forest */
-  --color-primary: #c45c26;
-  --color-primary-dark: #a04a1e;
-  --color-primary-light: #e87f4a;
-  --color-secondary: #2d5a45;
-  --color-secondary-dark: #1e3d2f;
-  --color-secondary-light: #3d7a5d;
+  /* Primary Colors - Ocean Teal & Sunset */
+  --color-primary: #0D9488;
+  --color-primary-dark: #0F766E;
+  --color-primary-light: #14B8A6;
+  --color-secondary: #134E4A;
+  --color-secondary-dark: #0F3D3E;
+  --color-secondary-light: #115E59;
   
   /* Accent Colors */
-  --color-accent: #d4a574;
-  --color-accent-gold: #c9a227;
-  --color-accent-teal: #1a9988;
+  --color-accent: #F59E0B;
+  --color-accent-gold: #D97706;
+  --color-accent-teal: #EA580C;
   
   /* Neutrals */
-  --color-bg-primary: #faf8f5;
-  --color-bg-secondary: #f5f1eb;
-  --color-bg-dark: #1a1a1a;
+  --color-bg-primary: #FAFAF9;
+  --color-bg-secondary: #F5F5F4;
+  --color-bg-dark: #1C1917;
   --color-bg-card: #ffffff;
   
   /* Text Colors */
-  --color-text-primary: #2d2a26;
-  --color-text-secondary: #6b6560;
-  --color-text-muted: #9a948c;
+  --color-text-primary: #1C1917;
+  --color-text-secondary: #57534E;
+  --color-text-muted: #A8A29E;
   --color-text-inverse: #ffffff;
   
   /* Status Colors */
-  --color-success: #2d8a5f;
-  --color-error: #c94a4a;
-  --color-warning: #d4a227;
+  --color-success: #059669;
+  --color-error: #DC2626;
+  --color-warning: #D97706;
   
   /* Gradients */
-  --gradient-hero: linear-gradient(135deg, #2d5a45 0%, #1a3d2d 50%, #0f2920 100%);
-  --gradient-primary: linear-gradient(135deg, #c45c26 0%, #e87f4a 100%);
+  --gradient-hero: linear-gradient(135deg, #134E4A 0%, #115E59 50%, #0F3D3E 100%);
+  --gradient-primary: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
   --gradient-card: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.7) 100%);
   
   /* Typography */
@@ -133,7 +133,7 @@ ul, ol {
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-xs) var(--space-md);
-  background: rgba(196, 92, 38, 0.1);
+  background: rgba(13, 148, 136, 0.1);
   color: var(--color-primary);
   border-radius: var(--radius-full);
   font-size: 0.75rem;
@@ -169,6 +169,35 @@ ul, ol {
   flex: 1;
 }
 
+.route-loading {
+  min-height: 45vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.route-loading p {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.route-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(13, 148, 136, 0.22);
+  border-top-color: var(--color-primary);
+  animation: route-spin 0.7s linear infinite;
+}
+
+@keyframes route-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ========== BUTTONS ========== */
 .btn {
   display: inline-flex;
@@ -185,12 +214,12 @@ ul, ol {
 .btn-primary {
   background: var(--gradient-primary);
   color: var(--color-text-inverse);
-  box-shadow: 0 4px 16px rgba(196, 92, 38, 0.3);
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(196, 92, 38, 0.4);
+  box-shadow: 0 8px 24px rgba(13, 148, 136, 0.4);
 }
 
 .btn-secondary {

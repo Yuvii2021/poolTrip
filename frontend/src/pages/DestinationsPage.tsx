@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, ArrowRight, Star, Search, Compass, Calendar, SlidersHorizontal } from 'lucide-react';
+import { MapPin, ArrowRight, Star, Search, Calendar, SlidersHorizontal, CheckCircle2 } from 'lucide-react';
 import { packageAPI } from '../services/api';
 import { TravelPackage, PackageFilters } from '../types';
 import { LocationAutocomplete } from '../components/LocationAutocomplete';
@@ -54,15 +54,18 @@ export const DestinationsPage = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (filtersOverride?: PackageFilters) => {
     const origin = searchFrom.trim();
+    const activeFilters = filtersOverride ?? filters;
     // Check if there are any active filters (excluding undefined values)
     const hasFilters = !!(
-      (filters.minPrice !== undefined) ||
-      (filters.maxPrice !== undefined) ||
-      (filters.days !== undefined) ||
-      (filters.transportation !== undefined) ||
-      (filters.featured !== undefined)
+      (activeFilters.minPrice !== undefined) ||
+      (activeFilters.maxPrice !== undefined) ||
+      (activeFilters.days !== undefined) ||
+      (activeFilters.minDays !== undefined) ||
+      (activeFilters.maxDays !== undefined) ||
+      (activeFilters.transportation !== undefined) ||
+      (activeFilters.featured !== undefined)
     );
     
     if (!origin && !searchDate && !hasFilters) {
@@ -89,7 +92,7 @@ export const DestinationsPage = () => {
       }
       
       // Apply filters
-      results = applyFiltersToResults(results);
+      results = applyFiltersToResults(results, activeFilters);
       
       // Filter by date if provided
       if (searchDate) {
@@ -109,43 +112,55 @@ export const DestinationsPage = () => {
     }
   };
 
-  const applyFiltersToResults = (results: TravelPackage[]): TravelPackage[] => {
+  const applyFiltersToResults = (results: TravelPackage[], activeFilters: PackageFilters): TravelPackage[] => {
     let filtered = [...results];
     
     // Price filter
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+    if (activeFilters.minPrice !== undefined || activeFilters.maxPrice !== undefined) {
       filtered = filtered.filter(pkg => {
         const price = pkg.discountedPrice || pkg.price;
-        const min = filters.minPrice ?? 0;
-        const max = filters.maxPrice ?? Infinity;
+        const min = activeFilters.minPrice ?? 0;
+        const max = activeFilters.maxPrice ?? Infinity;
         return price >= min && price <= max;
       });
     }
     
     // Duration filter
-    if (filters.days !== undefined) {
+    if (activeFilters.minDays !== undefined || activeFilters.maxDays !== undefined) {
+      filtered = filtered.filter(pkg => {
+        const min = activeFilters.minDays ?? 1;
+        const max = activeFilters.maxDays ?? Infinity;
+        return pkg.durationDays >= min && pkg.durationDays <= max;
+      });
+    } else if (activeFilters.days !== undefined) {
       filtered = filtered.filter(pkg => 
-        pkg.durationDays === filters.days
+        pkg.durationDays === activeFilters.days
       );
     }
     
     // Transportation filter
-    if (filters.transportation) {
-      filtered = filtered.filter(pkg => 
-        pkg.vehicleType === filters.transportation
-      );
+    if (activeFilters.transportation) {
+      filtered = filtered.filter(pkg => {
+        const transport = pkg.transportation || pkg.vehicleType;
+        return String(transport || '') === activeFilters.transportation;
+      });
     }
     
     // Featured filter
-    if (filters.featured) {
+    if (activeFilters.featured) {
       filtered = filtered.filter(pkg => pkg.featured === true);
     }
     
     return filtered;
   };
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = (newFilters?: PackageFilters) => {
     setShowFilterSidebar(false);
+    if (newFilters) {
+      setFilters(newFilters);
+      handleSearch(newFilters);
+      return;
+    }
     handleSearch();
   };
 
@@ -165,51 +180,56 @@ export const DestinationsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <span className={styles.badge}>
-              <MapPin size={14} /> {destination ? 'Destination' : 'All Destinations'}
-            </span>
             <h1>{currentDestination?.name || 'Explore Destinations'}</h1>
             <p>{currentDestination?.description || 'Discover amazing places across India'}</p>
             
             {/* Search Bar */}
-            <div className={styles.searchBox}>
-              <div className={styles.searchField}>
-                <MapPin size={18} className={styles.searchIcon} />
-                <LocationAutocomplete
-                  value={searchFrom}
-                  onChange={(value) => setSearchFrom(value)}
-                  placeholder="Search from your city"
-                  showIcon={false}
-                  inputClassName={styles.searchInput}
-                />
+            <div className={styles.searchBoxWrapper}>
+              <div className={styles.searchBox}>
+                <div className={styles.searchField}>
+                  <MapPin size={18} className={styles.searchIcon} />
+                  <LocationAutocomplete
+                    value={searchFrom}
+                    onChange={(value) => setSearchFrom(value)}
+                    placeholder="Search from your city"
+                    showIcon={false}
+                    inputClassName={styles.searchInput}
+                  />
+                </div>
+                
+                <div className={styles.searchDivider} />
+                
+                <div className={styles.dateField} onClick={() => (document.getElementById('destDatePicker') as HTMLInputElement)?.showPicker()}>
+                  <Calendar size={18} className={styles.dateIcon} />
+                  <input
+                    id="destDatePicker"
+                    type="date"
+                    value={searchDate}
+                    onChange={(e) => setSearchDate(e.target.value)}
+                    className={`${styles.dateInput} ${!searchDate ? styles.dateEmpty : ''}`}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  {!searchDate && <span className={styles.datePlaceholder}>Departure</span>}
+                </div>
+                
+                <button className={styles.searchBtn} onClick={() => handleSearch()}>
+                  <Search size={20} />
+                </button>
               </div>
-              
-              <div className={styles.searchDivider} />
-              
-              <div className={styles.dateField} onClick={() => (document.getElementById('destDatePicker') as HTMLInputElement)?.showPicker()}>
-                <Calendar size={18} className={styles.dateIcon} />
-                <input
-                  id="destDatePicker"
-                  type="date"
-                  value={searchDate}
-                  onChange={(e) => setSearchDate(e.target.value)}
-                  className={`${styles.dateInput} ${!searchDate ? styles.dateEmpty : ''}`}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-                {!searchDate && <span className={styles.datePlaceholder}>Departure</span>}
+
+              <div className={styles.searchBoxActions}>
+                <button
+                  type="button"
+                  className={`${styles.filtersPill} ${showFilterSidebar ? styles.filtersPillActive : ''} ${Object.keys(filters).length > 0 ? styles.hasFilters : ''}`}
+                  onClick={() => setShowFilterSidebar(!showFilterSidebar)}
+                >
+                  <SlidersHorizontal size={18} />
+                  <span>Filters</span>
+                  {Object.keys(filters).length > 0 && (
+                    <span className={styles.filterCountInline}>{Object.keys(filters).length}</span>
+                  )}
+                </button>
               </div>
-              
-              <button 
-                className={`${styles.filterBtn} ${showFilterSidebar ? styles.filterBtnActive : ''} ${Object.keys(filters).length > 0 ? styles.hasFilters : ''}`}
-                onClick={() => setShowFilterSidebar(!showFilterSidebar)}
-              >
-                <SlidersHorizontal size={18} />
-                {Object.keys(filters).length > 0 && <span className={styles.filterCount}>{Object.keys(filters).length}</span>}
-              </button>
-              
-              <button className={styles.searchBtn} onClick={handleSearch}>
-                <Search size={20} />
-              </button>
             </div>
             
             {/* Filter Sidebar */}
@@ -275,7 +295,7 @@ export const DestinationsPage = () => {
                   <Link to={`/package/${pkg.id}`} className={styles.packageCard}>
                     <div className={styles.packageImage}>
                       <img 
-                        src={pkg.coverImage || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'} 
+                        src={(pkg.media && pkg.media.length > 0) ? pkg.media[0] : 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'} 
                         alt={pkg.title}
                       />
                       <span className={styles.durationBadge}>
@@ -284,12 +304,34 @@ export const DestinationsPage = () => {
                     </div>
                     <div className={styles.packageContent}>
                       <h3>{pkg.title}</h3>
+                      {pkg.postedByName && (
+                        <Link to={`/user/${pkg.userId}`} className={styles.postedByRow} onClick={(e) => e.stopPropagation()}>
+                          {pkg.postedByPhoto ? (
+                            <img src={pkg.postedByPhoto} alt={pkg.postedByName} className={styles.postedByAvatar} />
+                          ) : (
+                            <div className={styles.postedByFallback}>
+                              {pkg.postedByName.trim().charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span>By <strong>{pkg.postedByName}</strong></span>
+                          {pkg.postedByVerified && (
+                            <span className={styles.postedByCheck} title="Verified profile">
+                              <CheckCircle2 size={14} />
+                            </span>
+                          )}
+                          {Number(pkg.rating) > 0 && (
+                            <span className={styles.postedByRating}>
+                              <Star size={11} fill="currentColor" /> {pkg.rating!.toFixed(1)}
+                            </span>
+                          )}
+                          <ArrowRight size={13} className={styles.postedByArrow} />
+                        </Link>
+                      )}
                       <div className={styles.packageMeta}>
                         <span><MapPin size={14} /> {pkg.destination}</span>
                         {pkg.transportationIcon && pkg.transportationLabel && (
                           <span>{pkg.transportationIcon} {pkg.transportationLabel}</span>
                         )}
-                        {pkg.rating && <span><Star size={14} fill="currentColor" /> {pkg.rating}</span>}
                       </div>
                       <div className={styles.packageFooter}>
                         <div className={styles.price}>

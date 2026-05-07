@@ -1,12 +1,38 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, ArrowRight, Star, Compass, Search, Calendar, SlidersHorizontal } from 'lucide-react';
+import { MapPin, ArrowRight, Star, Compass, Search, Calendar, SlidersHorizontal, CheckCircle2 } from 'lucide-react';
 import { packageAPI } from '../services/api';
 import { TravelPackage, PackageFilters, PackageTypeOption } from '../types';
 import { LocationAutocomplete } from '../components/LocationAutocomplete';
 import { FilterSidebar } from '../components/FilterSidebar';
+import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import styles from './ListingPage.module.css';
+
+// High-quality images for each category type
+const categoryImages: Record<string, string> = {
+  MOUNTAIN: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80',
+  MOUNTAINS: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80',
+  BEACH: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
+  CITY_TOUR: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80',
+  CITY: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80',
+  CULTURAL: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80',
+  YATRA: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80',
+  PILGRIMAGE: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80',
+  ADVENTURE: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80',
+  NATURE_WILDLIFE: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?w=600&q=80',
+  WILDLIFE: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?w=600&q=80',
+  ROAD_TRIP: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80',
+  HONEYMOON: 'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=600&q=80',
+  FAMILY: 'https://images.unsplash.com/photo-1602002418816-5c0aeef426aa?w=600&q=80',
+  CRUISE: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?w=600&q=80',
+  LUXURY: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80',
+  BUDGET: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=80',
+};
+
+const getCategoryImage = (value: string): string => {
+  return categoryImages[value.toUpperCase()] || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&q=80';
+};
 
 export const CategoriesPage = () => {
   const { category } = useParams<{ category?: string }>();
@@ -82,6 +108,8 @@ export const CategoriesPage = () => {
       (filtersToCheck.minPrice !== undefined) ||
       (filtersToCheck.maxPrice !== undefined) ||
       (filtersToCheck.days !== undefined) ||
+      (filtersToCheck.minDays !== undefined) ||
+      (filtersToCheck.maxDays !== undefined) ||
       (filtersToCheck.transportation !== undefined) ||
       (filtersToCheck.featured !== undefined)
     );
@@ -169,9 +197,10 @@ export const CategoriesPage = () => {
     
     // Transportation filter
     if (filterOverrides.transportation) {
-      filtered = filtered.filter(pkg => 
-        pkg.vehicleType === filterOverrides.transportation
-      );
+      filtered = filtered.filter(pkg => {
+        const transport = pkg.transportation || pkg.vehicleType;
+        return String(transport || '') === filterOverrides.transportation;
+      });
     }
     
     // Featured filter
@@ -212,9 +241,10 @@ export const CategoriesPage = () => {
     
     // Transportation filter
     if (filters.transportation) {
-      filtered = filtered.filter(pkg => 
-        pkg.vehicleType === filters.transportation
-      );
+      filtered = filtered.filter(pkg => {
+        const transport = pkg.transportation || pkg.vehicleType;
+        return String(transport || '') === filters.transportation;
+      });
     }
     
     // Featured filter
@@ -254,9 +284,9 @@ export const CategoriesPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <span className={styles.badge}>
+            {/* <span className={styles.badge}>
               <Compass size={14} /> {category ? 'Category' : 'All Categories'}
-            </span>
+            </span> */}
             <h1>
               {currentCategory ? (
                 <><span className={styles.emoji}>{currentCategory.icon}</span> {currentCategory.label}</>
@@ -265,6 +295,7 @@ export const CategoriesPage = () => {
             <p>{currentCategory?.label ? `Explore ${currentCategory.label} packages` : 'Find your perfect travel style'}</p>
             
             {/* Search Bar */}
+            <div className={styles.searchBoxWrapper}>
             <div className={styles.searchBox}>
               <div className={styles.searchField}>
                 <MapPin size={18} className={styles.searchIcon} />
@@ -291,27 +322,32 @@ export const CategoriesPage = () => {
                 />
                 {!searchDate && <span className={styles.datePlaceholder}>Departure</span>}
               </div>
-              
-              <button 
-                className={`${styles.filterBtn} ${showFilterSidebar ? styles.filterBtnActive : ''} ${hasActiveFilters() ? styles.hasFilters : ''}`}
+
+              <button className={styles.searchBtn} onClick={() => handleSearch()}>
+                <Search size={20} />
+              </button>
+            </div>
+
+            <div className={styles.searchBoxActions}>
+              <button
+                type="button"
+                className={`${styles.filtersPill} ${showFilterSidebar ? styles.filtersPillActive : ''} ${hasActiveFilters() ? styles.hasFilters : ''}`}
                 onClick={() => setShowFilterSidebar(!showFilterSidebar)}
               >
                 <SlidersHorizontal size={18} />
+                <span>Filters</span>
                 {hasActiveFilters() && (
-                  <span className={styles.filterCount}>
+                  <span className={styles.filterCountInline}>
                     {[
                       filters.minPrice !== undefined || filters.maxPrice !== undefined,
-                      filters.days !== undefined,
+                      filters.days !== undefined || filters.minDays !== undefined || filters.maxDays !== undefined,
                       filters.transportation !== undefined,
                       filters.featured !== undefined
                     ].filter(Boolean).length}
                   </span>
                 )}
               </button>
-              
-              <button className={styles.searchBtn} onClick={() => handleSearch()}>
-                <Search size={20} />
-              </button>
+            </div>
             </div>
             
             {/* Filter Sidebar */}
@@ -339,11 +375,17 @@ export const CategoriesPage = () => {
                   transition={{ delay: index * 0.05 }}
                 >
                   <Link to={`/categories/${cat.value}`} className={styles.categoryCard}>
-                    <div className={styles.categoryImagePlaceholder} />
+                    <img 
+                      src={getCategoryImage(cat.value)} 
+                      alt={cat.label}
+                      loading="lazy"
+                    />
                     <div className={styles.categoryOverlay} />
                     <div className={styles.categoryInfo}>
-                      <span className={styles.categoryEmoji}>{cat.icon}</span>
                       <h3>{cat.label}</h3>
+                      <span className={styles.categoryArrowIcon}>
+                        <ArrowRight size={16} />
+                      </span>
                     </div>
                   </Link>
                 </motion.div>
@@ -376,22 +418,52 @@ export const CategoriesPage = () => {
                 >
                   <Link to={`/package/${pkg.id}`} className={styles.packageCard}>
                     <div className={styles.packageImage}>
-                      <img 
-                        src={pkg.coverImage || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800'} 
-                        alt={pkg.title}
-                      />
+                      {(pkg.media && pkg.media.length > 0) ? (
+                        <img 
+                          src={pkg.media[0]} 
+                          alt={pkg.title}
+                        />
+                      ) : (
+                        <ImagePlaceholder
+                          destination={pkg.destination}
+                          packageType={pkg.packageTypeLabel || pkg.packageType}
+                          size="card"
+                        />
+                      )}
                       <span className={styles.durationBadge}>
                         {pkg.durationDays}D{pkg.durationNights ? `/${pkg.durationNights}N` : ''}
                       </span>
                     </div>
                     <div className={styles.packageContent}>
                       <h3>{pkg.title}</h3>
+                      {pkg.postedByName && (
+                        <Link to={`/user/${pkg.userId}`} className={styles.postedByRow} onClick={(e) => e.stopPropagation()}>
+                          {pkg.postedByPhoto ? (
+                            <img src={pkg.postedByPhoto} alt={pkg.postedByName} className={styles.postedByAvatar} />
+                          ) : (
+                            <div className={styles.postedByFallback}>
+                              {pkg.postedByName.trim().charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <span>By <strong>{pkg.postedByName}</strong></span>
+                          {pkg.postedByVerified && (
+                            <span className={styles.postedByCheck} title="Verified profile">
+                              <CheckCircle2 size={14} />
+                            </span>
+                          )}
+                          {Number(pkg.rating) > 0 && (
+                            <span className={styles.postedByRating}>
+                              <Star size={11} fill="currentColor" /> {pkg.rating!.toFixed(1)}
+                            </span>
+                          )}
+                          <ArrowRight size={13} className={styles.postedByArrow} />
+                        </Link>
+                      )}
                       <div className={styles.packageMeta}>
                         <span><MapPin size={14} /> {pkg.destination}</span>
                         {pkg.transportationIcon && pkg.transportationLabel && (
                           <span>{pkg.transportationIcon} {pkg.transportationLabel}</span>
                         )}
-                        {pkg.rating && <span><Star size={14} fill="currentColor" /> {pkg.rating}</span>}
                       </div>
                       <div className={styles.packageFooter}>
                         <div className={styles.price}>

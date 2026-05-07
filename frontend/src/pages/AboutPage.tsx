@@ -58,7 +58,7 @@ export const AboutPage = () => {
               viewport={{ once: true }}
             >
               <span className={styles.sectionBadge}>Our Story</span>
-              <h2>Things to do on a trip with PoolTrip</h2>
+              <h2>Things to do on a trip with PoolMyTrips</h2>
               <p>
                 Thirsty for a new kind of travel experience? Have limited time but want to explore? 
                 Walking in the midst of wilderness, finding glorious mountains enveloped with the 
@@ -66,7 +66,7 @@ export const AboutPage = () => {
                 and breathing in the fresh air while catching the sunrise.
               </p>
               <p>
-                Since our inception, PoolTrip has provided travelers from across India a sense of 
+                Since our inception, PoolMyTrips has provided travelers from across India a sense of 
                 'oneness' with nature. Having organized more than 100 trips across the country, 
                 choosing our adventures will make you come back for more.
               </p>

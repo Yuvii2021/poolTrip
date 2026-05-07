@@ -4,32 +4,47 @@ import { Link } from 'react-router-dom';
 import { 
   Search, MapPin, ArrowRight, Users, Calendar, Star,
   Compass, Shield, Award, ChevronRight, ChevronLeft, 
-  ChevronDown, Sparkles, X, SlidersHorizontal
+  ChevronDown, Sparkles, X, SlidersHorizontal, CheckCircle2
 } from 'lucide-react';
 import { packageAPI } from '../services/api';
 import { TravelPackage, PackageWithDistanceResponse, PackageFilters, PackageTypeOption } from '../types';
-import { LocationAutocomplete } from '../components/LocationAutocomplete';
+import { LocationAutocomplete, LocationResult } from '../components/LocationAutocomplete';
 import { FilterSidebar } from '../components/FilterSidebar';
+import { ImagePlaceholder } from '../components/ImagePlaceholder';
 import styles from './HomePage.module.css';
 
 // ========== DATA ==========
 
-const destinations = [
-  { name: 'Kashmir', slug: 'kashmir', image: 'https://images.unsplash.com/photo-1597074866923-dc0589150358?w=400' },
-  { name: 'Goa', slug: 'goa', image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?w=400' },
-  { name: 'Kerala', slug: 'kerala', image: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?w=400' },
-  { name: 'Rajasthan', slug: 'rajasthan', image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400' },
-  { name: 'Ladakh', slug: 'ladakh', image: 'https://images.unsplash.com/photo-1626015365107-36a02251e8f2?w=400' },
-  { name: 'Andaman', slug: 'andaman', image: 'https://images.unsplash.com/photo-1544550581-5f7ceaf7f992?w=400' },
-  { name: 'Sikkim', slug: 'sikkim', image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?w=400' },
-  { name: 'Varanasi', slug: 'varanasi', image: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=400' },
-];
+// High-quality images for each category type
+const categoryImages: Record<string, string> = {
+  MOUNTAIN: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80',
+  MOUNTAINS: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600&q=80',
+  BEACH: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&q=80',
+  CITY_TOUR: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80',
+  CITY: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80',
+  CULTURAL: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80',
+  YATRA: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80',
+  PILGRIMAGE: 'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&q=80',
+  ADVENTURE: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=80',
+  NATURE_WILDLIFE: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?w=600&q=80',
+  WILDLIFE: 'https://images.unsplash.com/photo-1472396961693-142e6e269027?w=600&q=80',
+  ROAD_TRIP: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&q=80',
+  HONEYMOON: 'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=600&q=80',
+  FAMILY: 'https://images.unsplash.com/photo-1602002418816-5c0aeef426aa?w=600&q=80',
+  CRUISE: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?w=600&q=80',
+  LUXURY: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=600&q=80',
+  BUDGET: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&q=80',
+};
+
+const getCategoryImage = (value: string): string => {
+  return categoryImages[value.toUpperCase()] || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&q=80';
+};
 
 const whyChooseUs = [
-  { icon: <Compass size={28} />, title: 'Exclusive Trips', description: 'Handpicked trips to explore hidden gems across India.', color: '#c45c26' },
-  { icon: <Shield size={28} />, title: 'Safety First', description: 'We prioritize your safety on every adventure.', color: '#2d5a45' },
-  { icon: <Award size={28} />, title: 'Expert Guides', description: 'Professional guides to enhance your travel experience.', color: '#d4a574' },
-  { icon: <Users size={28} />, title: 'Community Travel', description: 'Join fellow travelers and make new friends.', color: '#1a9988' },
+  { icon: <Users size={28} />, title: 'Join a Group', description: 'Solo traveller? Join an existing group and split costs — no awkward planning needed.', color: '#0D9488' },
+  { icon: <Shield size={28} />, title: 'All-Inclusive Packages', description: 'Transport, stays, food & itinerary sorted. Just book, pack and go.', color: '#134E4A' },
+  { icon: <Award size={28} />, title: 'Budget Friendly', description: 'Group pooling means you pay a fraction of solo trip costs. Travel more, spend less.', color: '#F59E0B' },
+  { icon: <Compass size={28} />, title: 'Verified Agencies', description: 'Every trip is run by vetted travel agencies with real reviews from past travelers.', color: '#EA580C' },
 ];
 
 
@@ -41,7 +56,19 @@ const TripCard = ({ pkg, index, distance, originInItinerary }: {
   originInItinerary?: boolean;
 }) => {
   const hasDiscount = pkg.discountedPrice && pkg.discountedPrice < pkg.price;
-  const imageUrl = pkg.coverImage || undefined;
+  const imageUrl = (pkg.media && pkg.media.length > 0) ? pkg.media[0] : undefined;
+  const transportationValue = pkg.transportationLabel || pkg.transportation || pkg.vehicleType;
+  const ratingValue = typeof pkg.rating === 'number' ? pkg.rating : Number.NaN;
+
+  const getTransportEmoji = (value?: string) => {
+    const upper = (value || '').toUpperCase();
+    if (upper.startsWith('FLIGHT')) return '✈️';
+    if (upper.startsWith('TRAIN')) return '🚆';
+    if (upper.startsWith('BUS')) return '🚌';
+    if (upper.startsWith('BIKE')) return '🏍️';
+    if (upper.startsWith('SELF')) return '🚶';
+    return '🚗';
+  };
 
   return (
     <motion.div
@@ -56,9 +83,11 @@ const TripCard = ({ pkg, index, distance, originInItinerary }: {
           {imageUrl ? (
             <img src={imageUrl} alt={pkg.title} />
           ) : (
-            <div className={styles.tripCardImagePlaceholder}>
-              <Compass size={40} />
-            </div>
+            <ImagePlaceholder
+              destination={pkg.destination}
+              packageType={pkg.packageTypeLabel || pkg.packageType}
+              size="card"
+            />
           )}
           <div className={styles.tripCardOverlay} />
           
@@ -89,6 +118,26 @@ const TripCard = ({ pkg, index, distance, originInItinerary }: {
           
         <div className={styles.tripCardContent}>
           <h3 className={styles.tripCardTitle}>{pkg.title}</h3>
+
+          {pkg.postedByName && (
+            <Link to={`/user/${pkg.userId}`} className={styles.tripCardPostedBy} onClick={(e) => e.stopPropagation()}>
+              {pkg.postedByPhoto ? (
+                <img src={pkg.postedByPhoto} alt={pkg.postedByName} className={styles.tripCardPostedByAvatar} />
+              ) : (
+                <div className={styles.tripCardPostedByFallback}>
+                  {pkg.postedByName.trim().charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className={styles.tripCardPostedByText}>By <strong>{pkg.postedByName}</strong></span>
+              {pkg.postedByVerified && <CheckCircle2 size={14} color="#22c55e" />}
+              {Number.isFinite(ratingValue) && ratingValue > 0 && (
+                <span className={styles.tripCardPostedByRating}>
+                  <Star size={11} fill="currentColor" /> {ratingValue.toFixed(1)}
+                </span>
+              )}
+              <ArrowRight size={13} className={styles.tripCardPostedByArrow} />
+            </Link>
+          )}
           
           <div className={styles.tripCardMeta}>
             {pkg.origin && (
@@ -97,14 +146,14 @@ const TripCard = ({ pkg, index, distance, originInItinerary }: {
                 {pkg.origin} → {pkg.destination}
               </span>
             )}
-            {(pkg.transportationIcon || pkg.transportation) && (
+            {transportationValue && (
               <span className={styles.tripCardTransport}>
-                {pkg.transportationIcon || '🚗'}
-              </span>
-            )}
-            {pkg.rating && (
-              <span className={styles.tripCardRating}>
-                <Star size={14} fill="currentColor" /> {pkg.rating}
+                <span className={styles.tripCardTransportIcon}>
+                  {pkg.transportationIcon || getTransportEmoji(String(transportationValue))}
+                </span>
+                <span className={styles.tripCardTransportLabel}>
+                  {pkg.transportationLabel || String(transportationValue)}
+                </span>
               </span>
             )}
           </div>
@@ -132,15 +181,13 @@ export const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [searchFrom, setSearchFrom] = useState('');
   const [searchTo, setSearchTo] = useState('');
+  const [searchFromLocation, setSearchFromLocation] = useState<LocationResult | undefined>(undefined);
+  const [searchToLocation, setSearchToLocation] = useState<LocationResult | undefined>(undefined);
   const [searchDate, setSearchDate] = useState('');
-  const [filterTransport, setFilterTransport] = useState('');
-  const [filterBudget, setFilterBudget] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [showFilterSidebar, setShowFilterSidebar] = useState(false);
   const [filters, setFilters] = useState<PackageFilters>({});
   const [isSearching, setIsSearching] = useState(false);
   const [isNearbySearch, setIsNearbySearch] = useState(false);
-  const [originCoords, setOriginCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [packageTypes, setPackageTypes] = useState<PackageTypeOption[]>([]);
   
   const searchResultsRef = useRef<HTMLDivElement>(null);
@@ -175,16 +222,19 @@ export const HomePage = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (filtersOverride?: PackageFilters) => {
     const origin = searchFrom.trim();
     const destination = searchTo.trim();
+    const activeFilters = filtersOverride ?? filters;
     // Check if there are any active filters (excluding undefined values)
-    const hasFilters = filterTransport || filterBudget || !!(
-      (filters.minPrice !== undefined) ||
-      (filters.maxPrice !== undefined) ||
-      (filters.days !== undefined) ||
-      (filters.transportation !== undefined) ||
-      (filters.featured !== undefined)
+    const hasFilters = !!(
+      (activeFilters.minPrice !== undefined) ||
+      (activeFilters.maxPrice !== undefined) ||
+      (activeFilters.days !== undefined) ||
+      (activeFilters.minDays !== undefined) ||
+      (activeFilters.maxDays !== undefined) ||
+      (activeFilters.transportation !== undefined) ||
+      (activeFilters.featured !== undefined)
     );
     
     if (!origin && !destination && !searchDate && !hasFilters) {
@@ -204,13 +254,23 @@ export const HomePage = () => {
       
       if (origin && destination) {
         setIsNearbySearch(true);
-        results = await packageAPI.searchPackagesNearby(origin, destination);
+        results = await packageAPI.searchPackagesNearby(origin, destination, {
+          originLat: searchFromLocation?.latitude,
+          originLong: searchFromLocation?.longitude,
+          destinationLat: searchToLocation?.latitude,
+          destinationLong: searchToLocation?.longitude,
+        });
       } else if (origin && !destination) {
         setIsNearbySearch(true);
-        results = await packageAPI.searchPackagesFromOrigin(origin);
+        results = await packageAPI.searchPackagesFromOrigin(origin, {
+          originLat: searchFromLocation?.latitude,
+          originLong: searchFromLocation?.longitude,
+        });
       } else {
         setIsNearbySearch(false);
-        const pkgs = await packageAPI.searchPackages(destination || '');
+        const pkgs = hasFilters
+          ? await packageAPI.getAllPackages(activeFilters)
+          : await packageAPI.searchPackages(destination || '');
         results = pkgs.map(pkg => ({
           packageInfo: pkg,
           distanceFromUserOrigin: null,
@@ -219,7 +279,7 @@ export const HomePage = () => {
       }
       
       // Apply filters (client-side for now)
-      results = applyFiltersToResults(results);
+      results = applyFiltersToResults(results, activeFilters);
       
       // Filter by date if provided
       if (searchDate) {
@@ -230,23 +290,6 @@ export const HomePage = () => {
           const filterDate = new Date(searchDate);
           return pkgDate >= filterDate;
         });
-      }
-      
-      // Legacy filter support (for backward compatibility)
-      if (filterTransport) {
-        results = results.filter(result => 
-          result.packageInfo.vehicleType === filterTransport
-        );
-      }
-      
-      if (filterBudget) {
-        const budgetOption = budgetOptions.find(b => b.value === filterBudget);
-        if (budgetOption) {
-          results = results.filter(result => {
-            const price = result.packageInfo.discountedPrice || result.packageInfo.price;
-            return price >= budgetOption.min && price <= budgetOption.max;
-          });
-        }
       }
       
       setSearchResults(results);
@@ -260,47 +303,60 @@ export const HomePage = () => {
     }
   };
 
-  const applyFiltersToResults = (results: PackageWithDistanceResponse[]): PackageWithDistanceResponse[] => {
+  const applyFiltersToResults = (
+    results: PackageWithDistanceResponse[],
+    activeFilters: PackageFilters,
+  ): PackageWithDistanceResponse[] => {
     let filtered = [...results];
     
     // Price filter
-    if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
+    if (activeFilters.minPrice !== undefined || activeFilters.maxPrice !== undefined) {
       filtered = filtered.filter(result => {
         const price = result.packageInfo.discountedPrice || result.packageInfo.price;
-        const min = filters.minPrice ?? 0;
-        const max = filters.maxPrice ?? Infinity;
+        const min = activeFilters.minPrice ?? 0;
+        const max = activeFilters.maxPrice ?? Infinity;
         return price >= min && price <= max;
       });
     }
     
     // Duration filter
-    if (filters.days !== undefined) {
+    if (activeFilters.minDays !== undefined || activeFilters.maxDays !== undefined) {
+      filtered = filtered.filter(result => {
+        const min = activeFilters.minDays ?? 1;
+        const max = activeFilters.maxDays ?? Infinity;
+        return result.packageInfo.durationDays >= min && result.packageInfo.durationDays <= max;
+      });
+    } else if (activeFilters.days !== undefined) {
       filtered = filtered.filter(result => 
-        result.packageInfo.durationDays === filters.days
+        result.packageInfo.durationDays === activeFilters.days
       );
     }
     
     // Transportation filter
-    if (filters.transportation) {
-      filtered = filtered.filter(result => 
-        result.packageInfo.vehicleType === filters.transportation
-      );
+    if (activeFilters.transportation) {
+      filtered = filtered.filter(result => {
+        const transport = result.packageInfo.transportation || result.packageInfo.vehicleType;
+        return String(transport || '') === activeFilters.transportation;
+      });
     }
     
     // Featured filter
-    if (filters.featured) {
+    if (activeFilters.featured) {
       filtered = filtered.filter(result => result.packageInfo.featured === true);
     }
     
     return filtered;
   };
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = (newFilters?: PackageFilters) => {
     setShowFilterSidebar(false);
-    // If we're already searching, re-run the search with new filters
-    if (isSearching) {
-      handleSearch();
+    if (newFilters) {
+      setFilters(newFilters);
+      handleSearch(newFilters);
+      return;
     }
+    // Always run search so filters work even before first search.
+    handleSearch();
   };
 
   const clearSearch = () => {
@@ -308,14 +364,12 @@ export const HomePage = () => {
     setSearchResults([]);
     setSearchFrom('');
     setSearchTo('');
+    setSearchFromLocation(undefined);
+    setSearchToLocation(undefined);
     setSearchDate('');
-    setFilterTransport('');
-    setFilterBudget('');
     setFilters({});
-    setShowFilters(false);
     setShowFilterSidebar(false);
     setIsNearbySearch(false);
-    setOriginCoords(null);
   };
   
 
@@ -348,21 +402,24 @@ export const HomePage = () => {
             transition={{ duration: 0.6 }}
           >
             <h1 className={styles.heroTitle}>
-              Travel Is The Only Thing You Buy<br />
-              <span className={styles.heroTitleAccent}>That Makes You Richer</span>
+              Book a Seat. Join the Trip.<br />
+              <span className={styles.heroTitleAccent}>Travel Together.</span>
             </h1>
             <p className={styles.heroSubtitle}>
-              Discover amazing destinations, join group trips, and create unforgettable memories 
-              with fellow travelers.
+              Ready-made group trips designed for smart travelers who want to save and explore more.
             </p>
 
             {/* Search Box */}
+            <div className={styles.searchBoxWrapper}>
             <div className={styles.searchBox}>
               <div className={styles.searchField}>
                 <MapPin size={18} className={styles.searchIcon} />
                 <LocationAutocomplete
                   value={searchFrom}
-                  onChange={(value) => setSearchFrom(value)}
+                  onChange={(value, location) => {
+                    setSearchFrom(value);
+                    setSearchFromLocation(location);
+                  }}
                   placeholder="Your city"
                   showIcon={false}
                   inputClassName={styles.searchInput}
@@ -375,7 +432,10 @@ export const HomePage = () => {
                 <Compass size={18} className={styles.searchIcon} />
                 <LocationAutocomplete
                   value={searchTo}
-                  onChange={(value) => setSearchTo(value)}
+                  onChange={(value, location) => {
+                    setSearchTo(value);
+                    setSearchToLocation(location);
+                  }}
                   placeholder="Destination"
                   showIcon={false}
                   inputClassName={styles.searchInput}
@@ -397,17 +457,23 @@ export const HomePage = () => {
                 {!searchDate && <span className={styles.datePlaceholder}>Departure</span>}
               </div>
               
-              <button 
-                className={`${styles.filterBtn} ${showFilterSidebar ? styles.filterBtnActive : ''} ${Object.keys(filters).length > 0 ? styles.hasFilters : ''}`}
+                <button className={styles.searchBtn} onClick={() => handleSearch()}>
+                <Search size={20} />
+              </button>
+            </div>
+
+            {/* Actions Row (keeps layout clean + better on mobile) */}
+            <div className={styles.searchBoxActions}>
+              <button
+                type="button"
+                className={`${styles.filtersPill} ${showFilterSidebar ? styles.filtersPillActive : ''} ${Object.keys(filters).length > 0 ? styles.hasFilters : ''}`}
                 onClick={() => setShowFilterSidebar(!showFilterSidebar)}
               >
                 <SlidersHorizontal size={18} />
-                {Object.keys(filters).length > 0 && <span className={styles.filterCount}>{Object.keys(filters).length}</span>}
+                <span>Filters</span>
+                {Object.keys(filters).length > 0 && <span className={styles.filterCountInline}>{Object.keys(filters).length}</span>}
               </button>
-              
-              <button className={styles.searchBtn} onClick={handleSearch}>
-                <Search size={20} />
-              </button>
+            </div>
             </div>
             
             {/* Filter Sidebar */}
@@ -506,21 +572,26 @@ export const HomePage = () => {
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: index * 0.06 }}
                 >
                   <Link to={`/categories/${cat.value}`} className={styles.categoryCard}>
-                    <div className={styles.categoryImage}>
-                      <div className={styles.categoryImagePlaceholder} />
-                      <div className={styles.categoryOverlay} />
-                    </div>
+                    <img 
+                      src={getCategoryImage(cat.value)} 
+                      alt={cat.label}
+                      className={styles.categoryImage}
+                      loading="lazy"
+                    />
+                    <div className={styles.categoryOverlay} />
                     <div className={styles.categoryContent}>
-                      <span className={styles.categoryEmoji}>{cat.icon}</span>
-                      <h3>{cat.label}</h3>
-          </div>
+                      <h3 className={styles.categoryLabel}>{cat.label}</h3>
+                      <span className={styles.categoryArrow}>
+                        <ArrowRight size={18} />
+                      </span>
+                    </div>
                   </Link>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
         </div>
       </section>
       )}
@@ -560,10 +631,10 @@ export const HomePage = () => {
         <section className={styles.whyChooseSection}>
           <div className={styles.container}>
             <div className={styles.sectionHeader}>
-              <span className={styles.sectionBadge}>Why PoolTrip</span>
-              <h2 className={styles.sectionTitle}>Your Travel, Our Passion</h2>
+              <span className={styles.sectionBadge}>Why PoolMyTrips</span>
+              <h2 className={styles.sectionTitle}>Travel Cheap. Travel Together.</h2>
               <p className={styles.sectionSubtitle}>
-                We provide unique trips that showcase the beauty of India with a focus on safety and expert guidance.
+                Find ready-made group trips at shared costs — perfect for solo travellers, friend groups, or anyone who wants a hassle-free getaway.
               </p>
             </div>
 

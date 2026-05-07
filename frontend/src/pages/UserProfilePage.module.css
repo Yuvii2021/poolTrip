@@ -1,0 +1,241 @@
+.page {
+  min-height: 100vh;
+  background: var(--color-bg-secondary);
+  padding-top: 5rem;
+}
+
+/* Loading & Error */
+.loadingState,
+.errorState {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--color-text-secondary);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.retryBtn {
+  padding: 0.75rem 1.5rem;
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+}
+
+.retryBtn:hover {
+  transform: translateY(-2px);
+}
+
+/* Hero Section */
+.hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  padding: 3rem 1.5rem 2rem;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(13, 148, 136, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(19, 78, 74, 0.1) 0%, transparent 50%);
+}
+
+.heroContent {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.avatar {
+  width: 110px;
+  height: 110px;
+  border-radius: var(--radius-full);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.heroInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.heroName {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.verifiedBadge {
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+.heroBio {
+  font-size: 0.9375rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+
+.heroStats {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stat svg {
+  opacity: 0.7;
+}
+
+.statValue {
+  font-weight: 700;
+  color: white;
+}
+
+/* Contact Row */
+.contactRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.contactChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.phoneChip {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.phoneChip:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.whatsappChip {
+  background: rgba(37, 211, 102, 0.15);
+  color: #4ade80;
+}
+
+.whatsappChip:hover {
+  background: rgba(37, 211, 102, 0.25);
+  color: #22c55e;
+}
+
+/* Body */
+.body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.sectionTitle {
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 1.25rem;
+}
+
+.emptyPackages {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+}
+
+/* Packages Grid */
+.packagesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .heroContent {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .avatar {
+    width: 90px;
+    height: 90px;
+    font-size: 2rem;
+  }
+
+  .heroStats {
+    justify-content: center;
+  }
+
+  .contactRow {
+    justify-content: center;
+  }
+
+  .packagesGrid {
+    grid-template-columns: 1fr;
+  }
+}

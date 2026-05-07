@@ -8,10 +8,11 @@ import com.travelhub.enums.Transportation;
 import com.travelhub.enums.requestFilter;
 import com.travelhub.service.FilterOptionsService;
 import com.travelhub.service.PackageService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -198,22 +199,31 @@ public class PackageController {
         return ResponseEntity.ok(packageService.getAgencyPackages(userDetails.getUsername()));
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<PackageResponse>> getPackagesByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(packageService.getPackagesByUserId(userId));
+    }
+
     @GetMapping("/filter-options")
     public ResponseEntity<?> getFilterOptions() {
         return ResponseEntity.ok(filterOptionsService.getFilterOptions());
     }
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PackageResponse> createPackage(
-            @Valid @RequestBody PackageRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @ModelAttribute PackageRequest request,
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest httpRequest) {
+        // DEBUG: log the raw transportation value from the request
+        log.debug("Raw 'transportation' param from request: '{}'", httpRequest.getParameter("transportation"));
+        log.debug("Bound PackageRequest.transportation: '{}'", request.getTransportation());
         return ResponseEntity.ok(packageService.createPackage(request, userDetails.getUsername()));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PackageResponse> updatePackage(
             @PathVariable Long id,
-            @Valid @RequestBody PackageRequest request,
+            @ModelAttribute PackageRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(packageService.updatePackage(id, request, userDetails.getUsername()));
     }

@@ -8,6 +8,9 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.travelhub.entity.TravelPackage.PackageType;
 import com.travelhub.enums.Transportation;
 
@@ -17,9 +20,6 @@ public class PackageRequest {
     private String title;
     
     private String description;
-
-    @NotBlank(message = "User Id is required")
-    private Long userId;
     
     @NotBlank(message = "Destination is required")
     private String destination;
@@ -51,7 +51,8 @@ public class PackageRequest {
     
     private Integer availableSeats;
     
-    @NotNull(message = "Total seats is required")
+    @NotNull(message = "Start date is required")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate startDate;
 
     @NotNull(message = "packageType is required")
@@ -59,7 +60,11 @@ public class PackageRequest {
 
     private Transportation transportation;
 
-    private List<String> imageUrls;
+    // ---- Media handling (images + videos via single field) ----
+    // New media files to upload to Cloudinary (accepts both images and videos)
+    private MultipartFile[] media;
+    // Already-uploaded Cloudinary URLs to retain (used during edit)
+    private List<String> existingMediaUrls;
     
     private String vechile;
     
@@ -70,4 +75,6 @@ public class PackageRequest {
     private String cancellationPolicy;
     
     private Boolean featured;
+    
+    private Boolean instantBooking;
 }
