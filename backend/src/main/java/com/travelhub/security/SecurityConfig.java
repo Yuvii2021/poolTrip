@@ -37,11 +37,13 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/subscribe").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/packages/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/packages/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/packages/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/packages/**").authenticated()
                 .requestMatchers(HttpMethod.PATCH, "/api/packages/**").authenticated()
+                .requestMatchers("/api/bookings/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

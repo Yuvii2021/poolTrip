@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/travel_marketplace?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: 12345678
+    password: hunji
     driver-class-name: com.mysql.cj.jdbc.Driver
   
   jpa:
@@ -17,10 +17,48 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:pooltrip7@gmail.com}
+    password: ${MAIL_PASSWORD:enuy oztc vndg jvug}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    # set to true if your provider requires it (e.g. some corporate SMTPs)
+    # properties.mail.smtp.ssl.enable: true
+
 app:
   jwt:
     secret: TravelHubSecretKey2024VeryLongSecureKeyForJWTTokenGeneration123456789
     expiration: 86400000 # 24 hours in milliseconds
+
+# cloudinary:
+#   cloud-name: ${CLOUDINARY_CLOUD_NAME:YOUR_CLOUD_NAME}
+#   api-key: ${CLOUDINARY_API_KEY:YOUR_API_KEY}
+#   api-secret: ${CLOUDINARY_API_SECRET:YOUR_API_SECRET}
+
+cloudinary:
+  cloud-name: dixqugzvj
+  api-key: 119476478953561
+  api-secret: ya7ZzAf5emcZyysbsQM9dcPAVtE
 
 logging:
   level:

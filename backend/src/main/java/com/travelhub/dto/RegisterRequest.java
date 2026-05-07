@@ -1,5 +1,6 @@
 package com.travelhub.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -17,7 +18,8 @@ public class RegisterRequest {
     private String fullName;
 
     @NotBlank(message = "Otp is required")
-    private String Otp;
+    @JsonProperty("Otp")
+    private String otp;
 
     @NotBlank(message = "Phone number is required")
     @Pattern(

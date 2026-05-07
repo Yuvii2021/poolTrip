@@ -12,13 +12,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class updateAuth {
-    @NotBlank(message = "Full Name is required")
     private String fullName;
+
+    @jakarta.validation.constraints.Email(message = "Invalid email format")
+    private String email;
 
     @Pattern(
         regexp = "^[6-9][0-9]{9}$",
         message = "Phone number must be a valid 10-digit Indian mobile number"
     )
     private String whatsappNumber;
+
+    private String bio;
 }
 

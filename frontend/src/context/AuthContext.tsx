@@ -7,9 +7,10 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 interface RegisterData {
@@ -17,6 +18,7 @@ interface RegisterData {
   password: string;
   fullName: string;
   phone: string;
+  Otp: string;
   role: UserRole;
   agencyName?: string;
   agencyDescription?: string;
@@ -33,9 +35,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     loadStoredAuth();
+
+    const handleForcedLogout = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('auth:logout', handleForcedLogout);
+    return () => window.removeEventListener('auth:logout', handleForcedLogout);
   }, []);
 
-  const loadStoredAuth = () => {
+  const loadStoredAuth = async () => {
     try {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
@@ -43,6 +52,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
+
+        try {
+          const me = await authAPI.getCurrentUser();
+          const merged = { ...JSON.parse(storedUser), ...me };
+          localStorage.setItem('user', JSON.stringify(merged));
+          setUser(merged);
+        } catch {
+          // 401 means token is expired/invalid — clear everything
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error('Error loading auth:', error);
@@ -51,14 +73,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
+  const login = async (phone: string, password: string) => {
+    const response = await authAPI.login(phone, password);
     handleAuthResponse(response);
+    // Hydrate extra profile fields
+    try {
+      const me = await authAPI.getCurrentUser();
+      setUser(prev => {
+        const merged = { ...(prev || {}), ...me };
+        localStorage.setItem('user', JSON.stringify(merged));
+        return merged as User;
+      });
+    } catch {
+      // ignore
+    }
   };
 
   const register = async (data: RegisterData) => {
     const response = await authAPI.register(data);
     handleAuthResponse(response);
+    // Hydrate extra profile fields
+    try {
+      const me = await authAPI.getCurrentUser();
+      setUser(prev => {
+        const merged = { ...(prev || {}), ...me };
+        localStorage.setItem('user', JSON.stringify(merged));
+        return merged as User;
+      });
+    } catch {
+      // ignore
+    }
   };
 
   const handleAuthResponse = (response: AuthResponse) => {
@@ -86,6 +130,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const refreshUser = async () => {
+    try {
+      const me = await authAPI.getCurrentUser();
+      setUser(prev => {
+        const merged = { ...(prev || {}), ...me };
+        localStorage.setItem('user', JSON.stringify(merged));
+        return merged as User;
+      });
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -96,6 +153,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         register,
         logout,
+        refreshUser,
       }}
     >
       {children}

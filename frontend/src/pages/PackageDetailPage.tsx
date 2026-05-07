@@ -1,40 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Calendar, Users, Star, Clock, Phone, MessageCircle,
-  ChevronLeft, ChevronRight, Check, X, Shield, FileText, ArrowRight, Sparkles,
-  Plane, Camera, Heart, Images
+  ChevronLeft, ChevronRight, Check, X, Shield, FileText, Sparkles,
+  Camera, Images, CheckCircle2, ExternalLink, Car,
+  Zap, UserCheck, Minus, Plus, Loader2, AlertCircle, Ticket
 } from 'lucide-react';
-import { packageAPI } from '../services/api';
-import { TravelPackage } from '../types';
+import { packageAPI, bookingAPI } from '../services/api';
+import { TravelPackage, BookingResponse } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { ImagePlaceholder } from '../components/ImagePlaceholder';
+import { getApiErrorMessage } from '../utils/error';
 import styles from './PackageDetailPage.module.css';
 
-const defaultImages: Record<string, string> = {
-  ADVENTURE: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200',
-  BEACH: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200',
-  CULTURAL: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1200',
-  HONEYMOON: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200',
-  FAMILY: 'https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=1200',
-  PILGRIMAGE: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=1200',
-  WILDLIFE: 'https://images.unsplash.com/photo-1516426122078-c23e76319801?w=1200',
-  CRUISE: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?w=1200',
-  LUXURY: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=1200',
-  BUDGET: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200',
-};
-
-const packageTypeIcons: Record<string, string> = {
-  ADVENTURE: '🏔️',
-  BEACH: '🏖️',
-  CULTURAL: '🏛️',
-  HONEYMOON: '💑',
-  FAMILY: '👨‍👩‍👧‍👦',
-  PILGRIMAGE: '🛕',
-  WILDLIFE: '🦁',
-  CRUISE: '🚢',
-  LUXURY: '💎',
-  BUDGET: '💰',
-};
 
 // Helper function to parse inclusions/exclusions (comma-separated string or array)
 const parseList = (data: string | string[] | undefined, fallback: string[]): string[] => {
@@ -74,8 +53,8 @@ const parseItinerary = (data: string | string[] | undefined, fallback: string[])
   return fallback;
 };
 
-// Helper function to check if a string is a valid image URL or base64
-const isValidImage = (str: string): boolean => {
+// Helper function to check if a string is a valid media URL or base64
+const isValidMedia = (str: string): boolean => {
   if (!str || typeof str !== 'string') return false;
   const trimmed = str.trim();
   return trimmed.startsWith('http://') || 
@@ -83,60 +62,146 @@ const isValidImage = (str: string): boolean => {
          trimmed.startsWith('data:image/');
 };
 
-// Helper function to parse images (comma-separated string or array)
-const parseImages = (coverImage: string | undefined, images: string | string[] | undefined, packageType: string): string[] => {
-  const defaultImg = defaultImages[packageType] || defaultImages.ADVENTURE;
-  const allImages: string[] = [];
+// Helper to detect if a URL is a video (Cloudinary video URLs contain /video/upload/)
+const isVideoUrl = (url: string): boolean => {
+  const lower = url.toLowerCase();
+  const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
+  return videoExtensions.some(ext => lower.includes(ext)) || lower.includes('/video/');
+};
+
+// Helper function to parse media (comma-separated string or array)
+const parseMedia = (media: string | string[] | undefined): string[] => {
+  if (!media) return [];
   
-  // Add cover image first if valid
-  if (coverImage && isValidImage(coverImage)) {
-    allImages.push(coverImage);
+  if (Array.isArray(media)) {
+    return media.filter(url => isValidMedia(url));
   }
   
-  // Parse additional images
-  if (images) {
-    if (Array.isArray(images)) {
-      allImages.push(...images.filter(img => isValidImage(img) && img !== coverImage));
-    } else if (typeof images === 'string') {
-      try {
-        const parsed = JSON.parse(images);
-        if (Array.isArray(parsed)) {
-          allImages.push(...parsed.filter((img: string) => isValidImage(img) && img !== coverImage));
-        }
-      } catch {
-        // Comma-separated - but be careful not to split base64 strings
-        if (!images.startsWith('data:image/')) {
-          const imgList = images.split(',').map(img => img.trim()).filter(img => isValidImage(img) && img !== coverImage);
-          allImages.push(...imgList);
-        } else if (isValidImage(images) && images !== coverImage) {
-          allImages.push(images);
-        }
+  if (typeof media === 'string') {
+    try {
+      const parsed = JSON.parse(media);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((url: string) => isValidMedia(url));
+      }
+    } catch {
+      if (!media.startsWith('data:image/')) {
+        return media.split(',').map(url => url.trim()).filter(url => isValidMedia(url));
+      } else if (isValidMedia(media)) {
+        return [media];
       }
     }
   }
   
-  // If no images, use default
-  if (allImages.length === 0) {
-    allImages.push(defaultImg);
-  }
-  
-  return allImages;
+  return [];
 };
 
 export const PackageDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [pkg, setPkg] = useState<TravelPackage | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'itinerary' | 'terms'>('overview');
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [heroSlideIndex, setHeroSlideIndex] = useState(0);
+  const heroTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Booking state
+  const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [bookingSeats, setBookingSeats] = useState(1);
+  const [bookingMessage, setBookingMessage] = useState('');
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState('');
+  const [bookingSuccess, setBookingSuccess] = useState<BookingResponse | null>(null);
+  const [existingBooking, setExistingBooking] = useState<BookingResponse | null>(null);
+  const [cancellingBooking, setCancellingBooking] = useState(false);
 
   useEffect(() => {
+    // Scroll to top when component mounts or id changes
+    window.scrollTo(0, 0);
+    
     if (id) {
       loadPackage(parseInt(id));
     }
   }, [id]);
+
+  // Check existing booking status when package loads
+  useEffect(() => {
+    if (pkg && isAuthenticated) {
+      checkBookingStatus();
+    }
+  }, [pkg?.id, isAuthenticated]);
+
+  const checkBookingStatus = async () => {
+    if (!pkg) return;
+    try {
+      const status = await bookingAPI.getBookingStatus(pkg.id);
+      setExistingBooking(status);
+    } catch {
+      setExistingBooking(null);
+    }
+  };
+
+  const handleBookSeats = async () => {
+    if (!pkg) return;
+    const tripDate = pkg.startDate ? new Date(pkg.startDate) : null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (tripDate && tripDate < today) {
+      setBookingError('This trip has already started. Yeh trip start ho chuki hai.');
+      return;
+    }
+    if (bookingSeats < 1 || bookingSeats > pkg.availableSeats) {
+      setBookingError(`Please select seats between 1 and ${pkg.availableSeats}.`);
+      return;
+    }
+    setBookingLoading(true);
+    setBookingError('');
+    try {
+      const response = await bookingAPI.createBooking({
+        packageId: pkg.id,
+        seats: bookingSeats,
+        message: bookingMessage || undefined,
+      });
+      setBookingSuccess(response);
+      setExistingBooking(response);
+      // Reload package to get updated seat count
+      loadPackage(pkg.id);
+    } catch (err: unknown) {
+      setBookingError(
+        getApiErrorMessage(
+          err,
+          'Booking failed. Please try again. Agar issue aaye toh host ko WhatsApp karein.',
+        ),
+      );
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!existingBooking) return;
+    setCancellingBooking(true);
+    try {
+      await bookingAPI.cancelBooking(existingBooking.id);
+      setExistingBooking(null);
+      setBookingSuccess(null);
+      // Reload package to get updated seat count
+      if (pkg) loadPackage(pkg.id);
+    } catch (err: unknown) {
+      setBookingError(
+        getApiErrorMessage(
+          err,
+          'Could not cancel booking right now. Kripya thodi der baad dubara try karein.',
+        ),
+      );
+    } finally {
+      setCancellingBooking(false);
+    }
+  };
+
+  const isOwnPackage = user && pkg && user.id === pkg.userId;
 
   const loadPackage = async (packageId: number) => {
     try {
@@ -149,9 +214,39 @@ export const PackageDetailPage = () => {
     }
   };
 
-  // Get all images for the package
-  const allImages = pkg ? parseImages(pkg.coverImage, pkg.images, pkg.packageType) : [];
-  const coverImage = pkg?.coverImage || defaultImages[pkg?.packageType || 'ADVENTURE'] || defaultImages.ADVENTURE;
+  // Separate images (for hero slider) from all media (for gallery)
+  const allMedia = pkg ? parseMedia(pkg.media) : [];
+  const heroImages = allMedia.filter(url => !isVideoUrl(url));
+
+  // Auto-slide hero images every 4 seconds
+  const resetHeroTimer = useCallback(() => {
+    if (heroTimerRef.current) clearInterval(heroTimerRef.current);
+    if (heroImages.length > 1) {
+      heroTimerRef.current = setInterval(() => {
+        setHeroSlideIndex(prev => (prev + 1) % heroImages.length);
+      }, 4000);
+    }
+  }, [heroImages.length]);
+
+  useEffect(() => {
+    resetHeroTimer();
+    return () => { if (heroTimerRef.current) clearInterval(heroTimerRef.current); };
+  }, [resetHeroTimer]);
+
+  const goToHeroSlide = (index: number) => {
+    setHeroSlideIndex(index);
+    resetHeroTimer();
+  };
+
+  const nextHeroSlide = () => {
+    setHeroSlideIndex(prev => (prev + 1) % heroImages.length);
+    resetHeroTimer();
+  };
+
+  const prevHeroSlide = () => {
+    setHeroSlideIndex(prev => (prev - 1 + heroImages.length) % heroImages.length);
+    resetHeroTimer();
+  };
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index);
@@ -163,24 +258,11 @@ export const PackageDetailPage = () => {
   };
 
   const nextImage = () => {
-    setLightboxIndex((prev) => (prev + 1) % allImages.length);
+    setLightboxIndex((prev) => (prev + 1) % allMedia.length);
   };
 
   const prevImage = () => {
-    setLightboxIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
-  };
-
-  const handleCall = () => {
-    if (pkg?.agencyPhone) {
-      window.location.href = `tel:${pkg.agencyPhone}`;
-    }
-  };
-
-  const handleWhatsApp = () => {
-    if (pkg?.agencyWhatsapp) {
-      const message = `Hi! I'm interested in the "${pkg.title}" package.`;
-      window.open(`https://wa.me/${pkg.agencyWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`);
-    }
+    setLightboxIndex((prev) => (prev - 1 + allMedia.length) % allMedia.length);
   };
 
   if (loading) {
@@ -210,12 +292,61 @@ export const PackageDetailPage = () => {
     : 0;
 
   return (
-    <div className={styles.page}>
-      {/* Hero Section with Cover Image */}
+    <motion.div 
+      className={styles.page}
+      initial={{ opacity: 0, y: -50 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -50 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
+      {/* Hero Section — Image Slider */}
       <section className={styles.hero}>
         <div className={styles.heroImage}>
-          <img src={coverImage} alt={pkg.title} />
+          {heroImages.length > 0 ? (
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={heroSlideIndex}
+                src={heroImages[heroSlideIndex]}
+                alt={`${pkg.title} - ${heroSlideIndex + 1}`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+              />
+            </AnimatePresence>
+          ) : (
+            <ImagePlaceholder
+              destination={pkg.destination}
+              packageType={pkg.packageTypeLabel || pkg.packageType}
+              size="hero"
+            />
+          )}
           <div className={styles.heroOverlay} />
+
+          {/* Slider controls */}
+          {heroImages.length > 1 && (
+            <>
+              <button className={`${styles.sliderBtn} ${styles.sliderBtnPrev}`} onClick={prevHeroSlide}>
+                <ChevronLeft size={22} />
+              </button>
+              <button className={`${styles.sliderBtn} ${styles.sliderBtnNext}`} onClick={nextHeroSlide}>
+                <ChevronRight size={22} />
+              </button>
+              <div className={styles.imageCounter}>
+                <Images size={14} />
+                {heroSlideIndex + 1} / {heroImages.length}
+              </div>
+              <div className={styles.sliderDots}>
+                {heroImages.map((_, i) => (
+                  <button
+                    key={i}
+                    className={`${styles.dot} ${i === heroSlideIndex ? styles.dotActive : ''}`}
+                    onClick={() => goToHeroSlide(i)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         <div className={styles.heroContent}>
@@ -231,7 +362,7 @@ export const PackageDetailPage = () => {
           <div className={styles.heroInfo}>
             <div className={styles.heroBadges}>
               <span className={styles.typeBadge}>
-                {packageTypeIcons[pkg.packageType]} {pkg.packageType}
+                {pkg.packageTypeIcon || '📦'} {pkg.packageTypeLabel || pkg.packageType}
               </span>
               {pkg.featured && (
                 <span className={styles.featuredBadge}>
@@ -254,12 +385,14 @@ export const PackageDetailPage = () => {
                 <Calendar size={18} />
                 <span>{pkg.durationDays}D / {pkg.durationNights || pkg.durationDays - 1}N</span>
               </div>
-              {pkg.rating && (
-                <div className={styles.heroMetaItem}>
-                  <Star size={18} fill="currentColor" />
-                  <span>{pkg.rating.toFixed(1)} ({pkg.reviewCount} reviews)</span>
-                </div>
-              )}
+              <div className={styles.heroMetaItem}>
+                <Star size={18} fill="currentColor" />
+                <span>
+                  {pkg.rating && pkg.rating > 0
+                    ? `${pkg.rating.toFixed(1)} (${pkg.reviewCount || 0} reviews)`
+                    : 'No reviews yet'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -297,7 +430,7 @@ export const PackageDetailPage = () => {
           <div className={styles.tabContent}>
             {activeTab === 'overview' && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={styles.overview}
               >
@@ -312,29 +445,49 @@ export const PackageDetailPage = () => {
                   </p>
                 </div>
 
-                {/* Photo Gallery */}
-                {allImages.length > 0 && (
+                {/* Media Gallery */}
+                {allMedia.length > 0 && (
                   <div className={styles.section}>
                     <h3 className={styles.sectionTitle}>
                       <Images size={20} />
-                      Photo Gallery
+                      Gallery
                     </h3>
                     <div className={styles.photoGallery}>
-                      {allImages.map((img, index) => (
+                      {allMedia.map((url, index) => (
                         <motion.div
                           key={index}
                           className={styles.galleryImage}
                           whileHover={{ scale: 1.02 }}
                           onClick={() => openLightbox(index)}
+                          style={{ position: 'relative' }}
                         >
-                          <img 
-                            src={img} 
-                            alt={`${pkg.title} - Photo ${index + 1}`}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                              (e.target as HTMLImageElement).parentElement!.style.display = 'none';
-                            }}
-                          />
+                          {isVideoUrl(url) ? (
+                            <video 
+                              src={url} 
+                              muted 
+                              preload="metadata"
+                              onError={(e) => {
+                                (e.target as HTMLVideoElement).style.display = 'none';
+                                (e.target as HTMLVideoElement).parentElement!.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <img 
+                              src={url} 
+                              alt={`${pkg.title} - Photo ${index + 1}`}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          {isVideoUrl(url) && (
+                            <span style={{
+                              position: 'absolute', top: 8, left: 8,
+                              background: 'rgba(0,0,0,0.7)', color: '#fff',
+                              padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600
+                            }}>▶ VID</span>
+                          )}
                           <div className={styles.galleryOverlay}>
                             <Camera size={24} />
                             <span>View</span>
@@ -393,7 +546,7 @@ export const PackageDetailPage = () => {
 
             {activeTab === 'itinerary' && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={styles.itinerary}
               >
@@ -419,7 +572,7 @@ export const PackageDetailPage = () => {
 
             {activeTab === 'terms' && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={styles.terms}
               >
@@ -429,7 +582,7 @@ export const PackageDetailPage = () => {
                     Cancellation Policy
                   </h3>
                   <p className={styles.policyText}>
-                    {pkg.cancellationPolicy || 'Free cancellation up to 7 days before departure. 50% refund for cancellations 3-7 days before. No refund for cancellations less than 3 days before departure.'}
+                    {pkg.cancellationPolicy || 'Not provided by host.'}
                   </p>
                 </div>
 
@@ -439,7 +592,7 @@ export const PackageDetailPage = () => {
                     Terms & Conditions
                   </h3>
                   <p className={styles.policyText}>
-                    {pkg.termsAndConditions || 'Valid government ID required at the time of booking. Prices are subject to change during peak seasons. The itinerary may be modified due to weather conditions or unforeseen circumstances.'}
+                    {pkg.termsAndConditions || 'Not provided by host.'}
                   </p>
                 </div>
               </motion.div>
@@ -453,7 +606,10 @@ export const PackageDetailPage = () => {
           <div className={styles.priceCard}>
             <div className={styles.pricing}>
               {hasDiscount && (
-                <span className={styles.originalPrice}>₹{pkg.price.toLocaleString()}</span>
+                <div className={styles.discountRow}>
+                  <span className={styles.originalPrice}>₹{pkg.price.toLocaleString()}</span>
+                  <span className={styles.saveBadge}>Save ₹{(pkg.price - pkg.discountedPrice!).toLocaleString()}</span>
+                </div>
               )}
               <div className={styles.currentPrice}>
                 <span className={styles.priceValue}>
@@ -463,69 +619,378 @@ export const PackageDetailPage = () => {
               </div>
             </div>
 
-            <div className={styles.availability}>
-              <div className={styles.availabilityItem}>
-                <Users size={18} />
-                <span>{pkg.availableSeats} seats available</span>
+            <div className={styles.tripDetails}>
+              <div className={styles.tripDetailItem}>
+                <div className={styles.tripDetailIcon}>
+                  <Users size={16} />
+                </div>
+                <div className={styles.tripDetailText}>
+                  <span className={styles.tripDetailValue}>{pkg.availableSeats} seats available</span>
+                  <span className={styles.tripDetailSub}>out of {pkg.totalSeats} total</span>
+                </div>
               </div>
               {pkg.startDate && (
-                <div className={styles.availabilityItem}>
-                  <Calendar size={18} />
-                  <span>Starts {new Date(pkg.startDate).toLocaleDateString()}</span>
+                <div className={styles.tripDetailItem}>
+                  <div className={styles.tripDetailIcon}>
+                    <Calendar size={16} />
+                  </div>
+                  <div className={styles.tripDetailText}>
+                    <span className={styles.tripDetailValue}>
+                      Starts {new Date(pkg.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    <span className={styles.tripDetailSub}>{pkg.durationDays}D / {pkg.durationNights || pkg.durationDays - 1}N trip</span>
+                  </div>
+                </div>
+              )}
+              {pkg.origin && (
+                <div className={styles.tripDetailItem}>
+                  <div className={styles.tripDetailIcon}>
+                    <MapPin size={16} />
+                  </div>
+                  <div className={styles.tripDetailText}>
+                    <span className={styles.tripDetailValue}>{pkg.origin}</span>
+                    <span className={styles.tripDetailSub}>Starting from</span>
+                  </div>
+                </div>
+              )}
+              {(pkg.transportationLabel || pkg.transportation || pkg.vehicleType) && (
+                <div className={styles.tripDetailItem}>
+                  <div className={styles.tripDetailIcon}>
+                    {pkg.transportationIcon ? (
+                      <span style={{ fontSize: '16px' }}>{pkg.transportationIcon}</span>
+                    ) : (
+                      <Car size={16} />
+                    )}
+                  </div>
+                  <div className={styles.tripDetailText}>
+                    <span className={styles.tripDetailValue}>
+                      {pkg.transportationLabel || pkg.transportation || pkg.vehicleType}
+                    </span>
+                    <span className={styles.tripDetailSub}>Transport</span>
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className={styles.ctaButtons}>
-              <motion.button
-                className={styles.callBtn}
-                onClick={handleCall}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Phone size={18} />
-                Call Now
-              </motion.button>
-              <motion.button
-                className={styles.whatsappBtn}
-                onClick={handleWhatsApp}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <MessageCircle size={18} />
-                WhatsApp
-              </motion.button>
-            </div>
           </div>
 
-          {/* Agency Card */}
-          <div className={styles.agencyCard}>
-            <div className={styles.agencyHeader}>
-              <div className={styles.agencyAvatar}>
-                <Plane size={24} />
+            {/* Booking Section */}
+            <div className={styles.bookingSection}>
+              {existingBooking ? (
+                <div className={styles.existingBooking}>
+                  <div className={styles.bookingStatusBanner} data-status={existingBooking.status}>
+                    {existingBooking.status === 'CONFIRMED' && <CheckCircle2 size={18} />}
+                    {existingBooking.status === 'PENDING' && <Clock size={18} />}
+                    {existingBooking.status === 'REJECTED' && <X size={18} />}
+                    {existingBooking.status === 'CANCELLED' && <X size={18} />}
+                    <span>
+                      {existingBooking.status === 'CONFIRMED' && `Booking Confirmed · ${existingBooking.seatsBooked} seat${existingBooking.seatsBooked > 1 ? 's' : ''}`}
+                      {existingBooking.status === 'PENDING' && `Booking Pending · ${existingBooking.seatsBooked} seat${existingBooking.seatsBooked > 1 ? 's' : ''}`}
+                      {existingBooking.status === 'REJECTED' && 'Booking Rejected'}
+                      {existingBooking.status === 'CANCELLED' && 'Booking Cancelled'}
+                    </span>
+                  </div>
+                  {(existingBooking.status === 'CONFIRMED' || existingBooking.status === 'PENDING') && (
+                    <button
+                      className={styles.cancelBookingBtn}
+                      onClick={handleCancelBooking}
+                      disabled={cancellingBooking}
+                    >
+                      {cancellingBooking ? <Loader2 size={16} className={styles.spinning} /> : <X size={16} />}
+                      Cancel Booking
+                    </button>
+                  )}
+                </div>
+              ) : isOwnPackage ? (
+                <div className={styles.ownPackageNote}>
+                  <Ticket size={16} />
+                  <span>This is your package</span>
+                </div>
+              ) : pkg.availableSeats > 0 ? (
+                <button
+                  className={styles.bookSeatBtn}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      navigate(`/login?redirect=${encodeURIComponent(`/package/${pkg.id}`)}`);
+                      return;
+                    }
+                    setBookingModalOpen(true);
+                    setBookingSeats(1);
+                    setBookingMessage('');
+                    setBookingError('');
+                    setBookingSuccess(null);
+                  }}
+                >
+                  {pkg.instantBooking !== false ? (
+                    <>
+                      <Zap size={18} />
+                      Book Seats Instantly
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck size={18} />
+                      Request to Book
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button className={styles.bookSeatBtn} disabled>
+                  <Users size={18} />
+                  Fully Booked
+                </button>
+              )}
+              {pkg.instantBooking !== false ? (
+                <p className={styles.bookingModeHint}>
+                  <Zap size={13} /> Instant confirmation
+                </p>
+              ) : (
+                <p className={styles.bookingModeHint}>
+                  <UserCheck size={13} /> Host approval required
+                </p>
+              )}
+            </div>
+
+          {/* Posted By Card */}
+          {pkg.postedByName && (
+            <div className={styles.postedByCard}>
+              <div className={styles.postedByHeader}>
+                <span className={styles.postedByLabel}>Posted by</span>
               </div>
-              <div>
-                <h4 className={styles.agencyName}>{pkg.agencyName || 'Travel Agency'}</h4>
-                <p className={styles.agencyLabel}>Verified Agency</p>
+
+              <div className={styles.userProfileSection}>
+                <Link to={`/user/${pkg.userId}`} className={styles.userProfileLink}>
+                  {pkg.postedByPhoto ? (
+                    <img
+                      src={pkg.postedByPhoto}
+                      alt={pkg.postedByName}
+                      className={styles.userAvatar}
+                    />
+                  ) : (
+                    <div className={styles.userAvatarFallback}>
+                      {pkg.postedByName.trim().charAt(0).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div className={styles.userInfo}>
+                    <div className={styles.userNameRow}>
+                      <h4 className={styles.userName}>{pkg.postedByName}</h4>
+                      {pkg.postedByVerified && (
+                        <CheckCircle2 size={16} className={styles.verifiedIcon} />
+                      )}
+                    </div>
+
+                    {pkg.rating && pkg.rating > 0 ? (
+                      <div className={styles.userRating}>
+                        <div className={styles.ratingStars}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              size={13}
+                              fill={star <= Math.round(pkg.rating!) ? 'currentColor' : 'none'}
+                              className={star <= Math.round(pkg.rating!) ? styles.starFilled : styles.starEmpty}
+                            />
+                          ))}
+                        </div>
+                        <span className={styles.ratingText}>
+                          {pkg.rating.toFixed(1)}/5
+                          {pkg.reviewCount ? ` · ${pkg.reviewCount} rating${pkg.reviewCount > 1 ? 's' : ''}` : ''}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className={styles.noRating}>No ratings yet</span>
+                    )}
+                  </div>
+
+                  <ExternalLink size={14} className={styles.profileArrow} />
+                </Link>
+              </div>
+
+              {/* Verified Badge */}
+              {pkg.postedByVerified && (
+                <div className={styles.verifiedBadge}>
+                  <Shield size={14} />
+                  <span>Verified Profile</span>
+                </div>
+              )}
+
+              {/* Vehicle Info */}
+              {(pkg.transportationLabel || pkg.transportation) && (
+                <div className={styles.vehicleInfo}>
+                  {pkg.transportationIcon ? (
+                    <span style={{ fontSize: '16px' }}>{pkg.transportationIcon}</span>
+                  ) : (
+                    <Car size={16} />
+                  )}
+                  <span>{pkg.transportationLabel || pkg.transportation}</span>
+                </div>
+              )}
+
+              {/* Contact User Directly */}
+              <div className={styles.userContactActions}>
+                {pkg.agencyPhone && (
+                  <a href={`tel:${pkg.agencyPhone}`} className={styles.userContactBtn}>
+                    <Phone size={15} />
+                    <span>Contact {pkg.postedByName.split(' ')[0]}</span>
+                  </a>
+                )}
+                {pkg.agencyWhatsapp && (
+                  <a
+                    href={`https://wa.me/${pkg.agencyWhatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${pkg.postedByName.split(' ')[0]}! I'm interested in your "${pkg.title}" trip.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.userWhatsappBtn}
+                  >
+                    <MessageCircle size={15} />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
               </div>
             </div>
-            <div className={styles.agencyStats}>
-              <div className={styles.agencyStat}>
-                <strong>100+</strong>
-                <span>Packages</span>
-              </div>
-              <div className={styles.agencyStat}>
-                <strong>4.8</strong>
-                <span>Rating</span>
-              </div>
-              <div className={styles.agencyStat}>
-                <strong>5K+</strong>
-                <span>Travelers</span>
-              </div>
-            </div>
-          </div>
+          )}
         </aside>
       </section>
+
+      {/* Booking Modal */}
+      <AnimatePresence>
+        {bookingModalOpen && (
+          <motion.div
+            className={styles.bookingOverlay}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !bookingLoading && setBookingModalOpen(false)}
+          >
+            <motion.div
+              className={styles.bookingModal}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {bookingSuccess ? (
+                <div className={styles.bookingSuccessContent}>
+                  <div className={styles.successIcon}>
+                    {bookingSuccess.status === 'CONFIRMED' ? (
+                      <CheckCircle2 size={48} />
+                    ) : (
+                      <Clock size={48} />
+                    )}
+                  </div>
+                  <h3>{bookingSuccess.status === 'CONFIRMED' ? 'Booking Confirmed!' : 'Request Sent!'}</h3>
+                  <p>
+                    {bookingSuccess.status === 'CONFIRMED'
+                      ? `Your ${bookingSuccess.seatsBooked} seat${bookingSuccess.seatsBooked > 1 ? 's' : ''} on "${pkg.title}" ${bookingSuccess.seatsBooked > 1 ? 'are' : 'is'} confirmed.`
+                      : `Your request for ${bookingSuccess.seatsBooked} seat${bookingSuccess.seatsBooked > 1 ? 's' : ''} has been sent to ${pkg.postedByName || 'the host'}. You'll be notified once they respond.`}
+                  </p>
+                  <div className={styles.successActions}>
+                    <button
+                      className={styles.successBtn}
+                      onClick={() => setBookingModalOpen(false)}
+                    >
+                      Done
+                    </button>
+                    <button
+                      className={styles.successBtnOutline}
+                      onClick={() => navigate('/my-bookings')}
+                    >
+                      View My Bookings
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className={styles.bookingModalHeader}>
+                    <h3>
+                      {pkg.instantBooking !== false ? (
+                        <><Zap size={20} /> Book Seats</>
+                      ) : (
+                        <><UserCheck size={20} /> Request to Book</>
+                      )}
+                    </h3>
+                    <button
+                      className={styles.bookingModalClose}
+                      onClick={() => setBookingModalOpen(false)}
+                      disabled={bookingLoading}
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  <div className={styles.bookingModalBody}>
+                    <div className={styles.bookingTripSummary}>
+                      <strong>{pkg.title}</strong>
+                      <span>{pkg.origin} → {pkg.destination}</span>
+                      <span>{pkg.startDate && new Date(pkg.startDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · {pkg.durationDays}D</span>
+                    </div>
+
+                    <div className={styles.seatSelector}>
+                      <label>Number of seats</label>
+                      <div className={styles.seatControls}>
+                        <button
+                          onClick={() => setBookingSeats(Math.max(1, bookingSeats - 1))}
+                          disabled={bookingSeats <= 1}
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <span className={styles.seatCount}>{bookingSeats}</span>
+                        <button
+                          onClick={() => setBookingSeats(Math.min(pkg.availableSeats, bookingSeats + 1))}
+                          disabled={bookingSeats >= pkg.availableSeats}
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
+                      <span className={styles.seatsAvailableNote}>{pkg.availableSeats} available</span>
+                    </div>
+
+                    <div className={styles.bookingMessageField}>
+                      <label>Message to host (optional)</label>
+                      <textarea
+                        value={bookingMessage}
+                        onChange={(e) => setBookingMessage(e.target.value)}
+                        placeholder="Introduce yourself or ask a question..."
+                        rows={3}
+                        maxLength={500}
+                      />
+                    </div>
+
+                    <div className={styles.bookingPriceSummary}>
+                      <div className={styles.bookingPriceRow}>
+                        <span>₹{(pkg.discountedPrice || pkg.price).toLocaleString()} × {bookingSeats} seat{bookingSeats > 1 ? 's' : ''}</span>
+                        <span className={styles.bookingTotalPrice}>₹{((pkg.discountedPrice || pkg.price) * bookingSeats).toLocaleString()}</span>
+                      </div>
+                      <p className={styles.noPaymentNote}>No online payment · Pay directly to host</p>
+                    </div>
+
+                    {bookingError && (
+                      <div className={styles.bookingErrorMsg}>
+                        <AlertCircle size={16} />
+                        <span>{bookingError}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.bookingModalFooter}>
+                    <button
+                      className={styles.confirmBookingBtn}
+                      onClick={handleBookSeats}
+                      disabled={bookingLoading}
+                    >
+                      {bookingLoading ? (
+                        <><Loader2 size={18} className={styles.spinning} /> Booking...</>
+                      ) : pkg.instantBooking !== false ? (
+                        <><Zap size={18} /> Confirm Booking</>
+                      ) : (
+                        <><UserCheck size={18} /> Send Request</>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Lightbox Modal */}
       <AnimatePresence>
@@ -548,9 +1013,19 @@ export const PackageDetailPage = () => {
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <img src={allImages[lightboxIndex]} alt={`${pkg.title} - Photo ${lightboxIndex + 1}`} />
+              {isVideoUrl(allMedia[lightboxIndex]) ? (
+                <video
+                  key={allMedia[lightboxIndex]}
+                  src={allMedia[lightboxIndex]}
+                  controls
+                  autoPlay
+                  style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: 8 }}
+                />
+              ) : (
+                <img src={allMedia[lightboxIndex]} alt={`${pkg.title} - Photo ${lightboxIndex + 1}`} />
+              )}
               
-              {allImages.length > 1 && (
+              {allMedia.length > 1 && (
                 <>
                   <button className={`${styles.lightboxNav} ${styles.lightboxPrev}`} onClick={prevImage}>
                     <ChevronLeft size={32} />
@@ -560,16 +1035,16 @@ export const PackageDetailPage = () => {
                   </button>
                   
                   <div className={styles.lightboxCounter}>
-                    {lightboxIndex + 1} / {allImages.length}
+                    {lightboxIndex + 1} / {allMedia.length}
                   </div>
                 </>
               )}
             </motion.div>
 
             {/* Thumbnail Strip */}
-            {allImages.length > 1 && (
+            {allMedia.length > 1 && (
               <div className={styles.lightboxThumbs}>
-                {allImages.map((img, index) => (
+                {allMedia.map((url, index) => (
                   <button
                     key={index}
                     className={`${styles.thumb} ${index === lightboxIndex ? styles.thumbActive : ''}`}
@@ -578,7 +1053,11 @@ export const PackageDetailPage = () => {
                       setLightboxIndex(index);
                     }}
                   >
-                    <img src={img} alt={`Thumbnail ${index + 1}`} />
+                    {isVideoUrl(url) ? (
+                      <video src={url} muted preload="metadata" />
+                    ) : (
+                      <img src={url} alt={`Thumbnail ${index + 1}`} />
+                    )}
                   </button>
                 ))}
               </div>
@@ -586,7 +1065,7 @@ export const PackageDetailPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 };
 

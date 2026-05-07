@@ -6,11 +6,13 @@ import com.travelhub.entity.TravelPackage.PackageType;
 import com.travelhub.enums.Operator;
 import com.travelhub.enums.Transportation;
 import com.travelhub.enums.requestFilter;
+import com.travelhub.service.FilterOptionsService;
 import com.travelhub.service.PackageService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,6 +29,7 @@ import java.util.Map;
 public class PackageController {
 
     private final PackageService packageService;
+    private final FilterOptionsService filterOptionsService;
     private final double radiusKm = 39.0;
     private final double earthKmPerDegree = 111.0;
     private final double radiusDeg = 0.351;
@@ -35,6 +38,8 @@ public class PackageController {
     private final void createHashOfFilter(Integer minPrice,
             Integer maxPrice,
             Integer days,
+            Integer minDays,
+            Integer maxDays,
             String transportation,
             Boolean featured,
             HashMap<String,requestFilter>hashMap) {
@@ -52,7 +57,19 @@ public class PackageController {
         }
 
         // ===== DURATION FILTER =====
-        if (days != null) {
+        // Support both exact match (days) and range (minDays/maxDays)
+        if (minDays != null || maxDays != null) {
+            int minDur = (minDays != null) ? minDays : 1;
+            int maxDur = (maxDays != null) ? maxDays : Integer.MAX_VALUE;
+
+            requestFilter durationFilter = new requestFilter();
+            durationFilter.setField("durationDays");
+            durationFilter.setOperator(Operator.BETWEEN);
+            durationFilter.setValue(List.of(minDur, maxDur));
+
+            hashMap.put("durationDays", durationFilter);
+        } else if (days != null) {
+            // Legacy support for exact match
             requestFilter durationFilter = new requestFilter();
             durationFilter.setField("durationDays");
             durationFilter.setOperator(Operator.EQ);
@@ -88,8 +105,23 @@ public class PackageController {
     }
 
     @GetMapping
-    public ResponseEntity<List<PackageResponse>> getAllPackages() {
-        return ResponseEntity.ok(packageService.getAllPackages());
+    public ResponseEntity<List<PackageResponse>> getAllPackages(
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) Integer days,
+            @RequestParam(required = false) Integer minDays,
+            @RequestParam(required = false) Integer maxDays,
+            @RequestParam(required = false) String transportation,
+            @RequestParam(required = false) Boolean featured) {
+        
+        HashMap<String, requestFilter> hashMap = new HashMap<>();
+        createHashOfFilter(minPrice, maxPrice, days, minDays, maxDays, transportation, featured, hashMap);
+        
+        if (hashMap.isEmpty()) {
+            return ResponseEntity.ok(packageService.getAllPackages());
+        } else {
+            return ResponseEntity.ok(packageService.getAllPackagesWithFilters(hashMap));
+        }
     }
 
     @GetMapping("/active")
@@ -114,10 +146,27 @@ public class PackageController {
     // }
 
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<PackageResponse>> getPackagesByType(@PathVariable PackageType type) {
-        return ResponseEntity.ok(packageService.getPackagesByType(type));
+    public ResponseEntity<List<PackageResponse>> getPackagesByType(
+            @PathVariable PackageType type,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) Integer days,
+            @RequestParam(required = false) Integer minDays,
+            @RequestParam(required = false) Integer maxDays,
+            @RequestParam(required = false) String transportation,
+            @RequestParam(required = false) Boolean featured) {
+        
+        HashMap<String, requestFilter> hashMap = new HashMap<>();
+        createHashOfFilter(minPrice, maxPrice, days, minDays, maxDays, transportation, featured, hashMap);
+        
+        if (hashMap.isEmpty()) {
+            return ResponseEntity.ok(packageService.getPackagesByType(type));
+        } else {
+            return ResponseEntity.ok(packageService.getPackagesByTypeWithFilters(type, hashMap));
+        }
     }
 
+    // TODO: need to add filters for this endpoint
     @GetMapping("/type/{type}/originLat/{originLat}/originLong/{originLong}")
     public ResponseEntity<List<PackageResponse>> getPackagesByTypeAndOrigin(@PathVariable PackageType type,
             @PathVariable Double originLat,
@@ -126,11 +175,13 @@ public class PackageController {
             @RequestParam(required = false) Integer minPrice,
             @RequestParam(required = false) Integer maxPrice,
             @RequestParam(required = false) Integer days,
+            @RequestParam(required = false) Integer minDays,
+            @RequestParam(required = false) Integer maxDays,
             @RequestParam(required = false) String transportation,
             @RequestParam(required = false) Boolean featured) {
 
         HashMap<String, requestFilter> hashMap = new HashMap<>();
-        createHashOfFilter(minPrice, maxPrice, days, transportation, featured, hashMap);
+        createHashOfFilter(minPrice, maxPrice, days, minDays, maxDays, transportation, featured, hashMap);
 
         return ResponseEntity
                 .ok(packageService.getPackagesByTypeAndOrigin(type, originLong, originLat, maxDistanceSq, hashMap));
@@ -148,17 +199,31 @@ public class PackageController {
         return ResponseEntity.ok(packageService.getAgencyPackages(userDetails.getUsername()));
     }
 
-    @PostMapping
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<PackageResponse>> getPackagesByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(packageService.getPackagesByUserId(userId));
+    }
+
+    @GetMapping("/filter-options")
+    public ResponseEntity<?> getFilterOptions() {
+        return ResponseEntity.ok(filterOptionsService.getFilterOptions());
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PackageResponse> createPackage(
-            @Valid @RequestBody PackageRequest request,
-            @AuthenticationPrincipal UserDetails userDetails) {
+            @ModelAttribute PackageRequest request,
+            @AuthenticationPrincipal UserDetails userDetails,
+            HttpServletRequest httpRequest) {
+        // DEBUG: log the raw transportation value from the request
+        log.debug("Raw 'transportation' param from request: '{}'", httpRequest.getParameter("transportation"));
+        log.debug("Bound PackageRequest.transportation: '{}'", request.getTransportation());
         return ResponseEntity.ok(packageService.createPackage(request, userDetails.getUsername()));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PackageResponse> updatePackage(
             @PathVariable Long id,
-            @Valid @RequestBody PackageRequest request,
+            @ModelAttribute PackageRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.ok(packageService.updatePackage(id, request, userDetails.getUsername()));
     }

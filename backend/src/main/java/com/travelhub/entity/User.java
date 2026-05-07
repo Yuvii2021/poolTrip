@@ -30,6 +30,17 @@ public class User {
     
     private String whatsappNumber;
 
+    @Column(columnDefinition = "TEXT")
+    private String bio;
+
+    private String profilePhoto;
+
+    @Column(nullable = false)
+    private Boolean phoneVerified;
+
+    @Column(nullable = false)
+    private Boolean emailVerified;
+
     private Double rating;
 
     private Integer reviewCount;
@@ -48,6 +59,8 @@ public class User {
         if(rating==null)rating = 0.0;
         if(reviewCount==null)reviewCount = 0;
         if (numberOfTrips == null) numberOfTrips = 0L;
+        if (phoneVerified == null) phoneVerified = Boolean.TRUE; // phone OTP happens at registration
+        if (emailVerified == null) emailVerified = Boolean.FALSE;
     }
     
     @PreUpdate
