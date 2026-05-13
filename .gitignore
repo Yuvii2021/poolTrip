@@ -1,0 +1,2 @@
+# Dependencies (never commit — already tracked copies must be removed with `git rm -r --cached`)
+node_modules/
